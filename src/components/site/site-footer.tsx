@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Mail } from "lucide-react";
 import { FaBehance, FaFacebookF, FaPhone, FaTiktok } from "react-icons/fa6";
 import { RiInstagramLine } from "react-icons/ri";
-import { siteBrand, siteSocial } from "@/lib/site-content";
+import { siteAdminLoginHref, siteBrand, siteSocial } from "@/lib/site-content";
 import { getSitePageFallback } from "@/lib/site-page-defaults";
 import type { ContactPageContent } from "@/lib/validations/site-page";
 import { cn } from "@/lib/utils";
@@ -86,7 +86,13 @@ export function SiteFooter({ className, contact }: SiteFooterProps) {
             </Link>
           ))}
         </div>
-        <p className="site-footer-copyright">{siteBrand.copyright}</p>
+        <Link
+          href={siteAdminLoginHref}
+          prefetch={false}
+          className="site-footer-copyright"
+        >
+          {siteBrand.copyright}
+        </Link>
       </div>
     </footer>
   );

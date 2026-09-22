@@ -27,6 +27,7 @@ interface HomeProjectCurtainCardProps {
   gate?: "anchor" | "immediate";
   enterTogether?: boolean;
   image?: string;
+  className?: string;
 }
 
 export function HomeProjectCurtainCard({
@@ -38,6 +39,7 @@ export function HomeProjectCurtainCard({
   gate = "anchor",
   enterTogether = false,
   image,
+  className,
 }: HomeProjectCurtainCardProps) {
   const slotRef = useRef<HTMLLIElement>(null);
   const playOnLoad = gate === "immediate";
@@ -194,7 +196,7 @@ export function HomeProjectCurtainCard({
   return (
     <li
       ref={slotRef}
-      className={cn("relative", hoverScale && "project-card-hover-scale")}
+      className={cn("relative", hoverScale && "project-card-hover-scale", className)}
     >
       <div className="relative">
         <ProjectCard

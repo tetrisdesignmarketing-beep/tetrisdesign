@@ -26,8 +26,9 @@ export const siteNav = [
   { label: "DỰ ÁN", href: "/projects" },
   { label: "DỊCH VỤ", href: "/services" },
   { label: "LIÊN HỆ", href: "/contact" },
-  { label: "LOGIN", href: "/admin/login" },
 ] as const;
+/** Login admin: không còn ở menu — bấm "© 2026 TETRIS DESIGN" ở footer để vào. */
+export const siteAdminLoginHref = "/admin/login";
 
 export const siteContact = {
   email: "tetrisdesign.mng@gmail.com",

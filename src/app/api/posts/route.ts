@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { postSchema } from "@/lib/validations/post";
+import { postQuerySchema, postSchema } from "@/lib/validations/post";
 import { slugSchema } from "@/lib/validations/shared";
 import { slugify } from "@/lib/utils";
 
@@ -39,21 +39,63 @@ async function assertCategory(categoryId: string) {
   return null;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  try {
-    const posts = await prisma.post.findMany({
-      orderBy: { updatedAt: "desc" },
-      include: { category: { select: { id: true, name: true } } },
-    });
-    return NextResponse.json(posts);
-  } catch {
+  const { searchParams } = new URL(request.url);
+  const parsed = postQuerySchema.safeParse({
+    cursor: searchParams.get("cursor") ?? undefined,
+    limit: searchParams.get("limit") ?? undefined,
+    featured: searchParams.get("featured") ?? undefined,
+    q: searchParams.get("q") ?? undefined,
+  });
+  if (!parsed.success) {
     return NextResponse.json(
-      { error: "Failed to fetch posts" },
+      { error: "Validation failed", details: parsed.error.flatten() },
+      { status: 400 },
+    );
+  }
+  const { cursor, limit, featured, q } = parsed.data;
+
+  try {
+    const rows = await prisma.post.findMany({
+      where: {
+        AND: [
+          featured === "true" ? { featured: true } : {},
+          q ? { title: { contains: q, mode: "insensitive" as const } } : {},
+        ],
+      },
+      // id tiebreak: thứ tự luôn xác định (kể cả nhiều bài cùng sortOrder) — cursor ổn định.
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }, { id: "asc" }],
+      take: limit + 1,
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+      select: {
+        id: true,
+        title: true,
+        address: true,
+        concept: true,
+        published: true,
+        featured: true,
+        sortOrder: true,
+        category: { select: { name: true } },
+      },
+    });
+
+    const hasMore = rows.length > limit;
+    const items = hasMore ? rows.slice(0, limit) : rows;
+    const nextCursor = hasMore ? (items.at(-1)?.id ?? null) : null;
+
+    return NextResponse.json({ items, nextCursor });
+  } catch (err) {
+    console.error("Fetch posts error:", err);
+    return NextResponse.json(
+      {
+        error:
+          "Không kết nối được database. Kiểm tra DATABASE_URL trong file .env và chạy npm run db:push.",
+      },
       { status: 500 },
     );
   }
@@ -83,6 +125,7 @@ export async function POST(request: Request) {
       images,
       layoutStyle,
       published,
+      featured,
       address,
       concept,
       description,
@@ -118,6 +161,7 @@ export async function POST(request: Request) {
         images,
         layoutStyle,
         published,
+        featured,
       },
     });
 

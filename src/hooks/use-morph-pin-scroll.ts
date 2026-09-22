@@ -1,7 +1,15 @@
 "use client";
 
 import { useLayoutEffect, useRef } from "react";
-import { useFullPageScroll } from "@/lib/full-page-scroll/context";
+import { useFullPageScrollOptional } from "@/lib/full-page-scroll/context";
+import { getHeaderOffset, getStableViewportHeight } from "@/lib/home-scroll";
+
+function isCoarsePointer(): boolean {
+  return (
+    window.matchMedia("(pointer: coarse)").matches ||
+    window.matchMedia("(max-width: 767px)").matches
+  );
+}
 
 function readCssNumber(
   root: HTMLElement,
@@ -67,15 +75,9 @@ function letterExitPx(progress: number, vw: number): string {
   return `${(Math.round(-progress * vw * 10) / 10).toFixed(1)}px`;
 }
 
-/** Brand-break: logo rest + đã rời đỉnh mới nhả letter-exit. */
-const BRAND_BREAK_LETTER_ARM_PX = 12;
-
-function brandBreakLetterArmed(root: HTMLElement, scrollTop: number): boolean {
-  if (!root.hasAttribute("data-brand-break")) return true;
-  return (
-    root.getAttribute("data-brand-break-logo") === "rest" &&
-    scrollTop > BRAND_BREAK_LETTER_ARM_PX
-  );
+/** Enter: phải (vw) → đích (0) — ngược hướng exit, dùng chung hàm so le. */
+function enterOffsetPx(progress: number, vw: number): string {
+  return `${(Math.round((1 - progress) * vw * 10) / 10).toFixed(1)}px`;
 }
 
 /** Đáy photo đã paint (object-contain), không phải đáy khung wrapper. */
@@ -118,44 +120,6 @@ function measureVisualImageBottom(wrapper: HTMLElement): number {
   return contentTop + extraH * posY + renderedH;
 }
 
-/** Giữ phase morph khi inner viewport đổi. Extra sau unstick giữ px. */
-function remapScrollTopForVvhChange(
-  scroller: HTMLElement,
-  prevVvh: number,
-  vvh: number,
-  letterRatio: number,
-  imageRatio: number,
-  alignSpeed: number,
-): void {
-  if (prevVvh < 1 || Math.abs(vvh - prevVvh) < 1) return;
-
-  const oldLetterDist = prevVvh * letterRatio;
-  const oldImageDist = prevVvh * imageRatio;
-  const oldUnstick =
-    oldLetterDist + (alignSpeed > 0 ? oldImageDist / alignSpeed : oldImageDist);
-  const newLetterDist = vvh * letterRatio;
-  const newImageDist = vvh * imageRatio;
-  const newUnstick =
-    newLetterDist + (alignSpeed > 0 ? newImageDist / alignSpeed : newImageDist);
-
-  const oldScroll = scroller.scrollTop;
-  let targetTop: number;
-
-  if (oldScroll > oldUnstick) {
-    targetTop = newUnstick + (oldScroll - oldUnstick);
-  } else if (oldLetterDist > 0 && oldScroll < oldLetterDist) {
-    targetTop = (oldScroll / oldLetterDist) * newLetterDist;
-  } else if (oldImageDist > 0) {
-    const pImage = clamp01((oldScroll - oldLetterDist) / oldImageDist);
-    targetTop = newLetterDist + pImage * newImageDist;
-  } else {
-    targetTop = oldScroll * (vvh / prevVvh);
-  }
-
-  if (Math.abs(targetTop - oldScroll) < 1) return;
-  scroller.scrollTop = targetTop;
-}
-
 function measureContentShiftPx(
   root: HTMLElement,
   titleGapPx: number,
@@ -173,6 +137,17 @@ function measureContentShiftPx(
   return measureVisualImageBottom(image) + titleGapPx - naturalTop;
 }
 
+/** localScrollTop dùng chung cho các hook khác (vd. brand-break logo snap-home):
+ * vị trí cuộn cục bộ so với track — 0 nghĩa là chưa chạm điểm sticky, tăng dần
+ * khi đang pin. `null` khi root chưa mount hoặc không tìm thấy track. */
+export function getMorphPinLocalScrollTop(root: HTMLElement): number | null {
+  const track = root.querySelector("[data-morph-pin-track]");
+  if (!(track instanceof HTMLElement)) return null;
+  const headerOffset = getHeaderOffset();
+  const trackTop = track.getBoundingClientRect().top;
+  return Math.max(0, headerOffset - trackTop);
+}
+
 /** Chữ (tùy chọn) → ảnh scale → pin dưới menu → flow khi title cách photo `--morph-pin-title-gap` (sticky tự nhả). */
 export function useMorphPinScroll(sectionId: string) {
   const rootRef = useRef<HTMLDivElement>(null);
@@ -188,23 +163,27 @@ export function useMorphPinScroll(sectionId: string) {
   const lastMeasureProgressRef = useRef({ pShrink: -1, pAlign: -1 });
   const lastVvhRef = useRef(0);
   const shiftRef = useRef(0);
-  const { pager, getPanelMotionState } = useFullPageScroll();
-  const index = pager.sections.findIndex((section) => section.id === sectionId);
-  const motion = index >= 0 ? getPanelMotionState(index) : "inactive";
-  const enabled = motion === "active" || motion === "entering";
+  const context = useFullPageScrollOptional();
+  const index = context
+    ? context.pager.sections.findIndex((section) => section.id === sectionId)
+    : -1;
+  const motion =
+    context && index >= 0 ? context.getPanelMotionState(index) : "inactive";
+  /* Không có FullPageScrollRoot (trang cuộn bình thường, vd /about) → luôn bật,
+     không còn khái niệm panel "inactive". */
+  const enabled = context ? motion === "active" || motion === "entering" : true;
 
   useLayoutEffect(() => {
     const root = rootRef.current;
     if (!root) return;
 
-    const scroller = root.closest("[data-fps-inner-scroll]");
-    if (!(scroller instanceof HTMLElement)) return;
+    const track = root.querySelector("[data-morph-pin-track]");
+    if (!(track instanceof HTMLElement)) return;
     root.dataset.morphPinBound = "react";
 
     let frame = 0;
     let touchEndFrame = 0;
-    /* Đang chạm: không được set `scrollTop` (remap) — iOS sẽ hủy momentum và
-       ảnh giật thay vì scale. Chờ nhấc tay rồi mới remap. */
+    /* Đang chạm: không remeasure vvh — iOS sẽ hủy momentum và ảnh giật thay vì scale. */
     let touching = false;
 
     const sync = () => {
@@ -212,7 +191,14 @@ export function useMorphPinScroll(sectionId: string) {
         1,
         readCssNumber(root, "--morph-pin-vvh-slack", 48),
       );
-      let vvh = scroller.clientHeight;
+      const headerOffset = getHeaderOffset();
+      /* Touch: dùng viewport ổn định (không co theo visualViewport) — khớp
+         `useViewportBelowHeader`, tránh thanh URL iOS đổi giữa lúc cuộn làm
+         vvh đo lại liên tục và ảnh giật. */
+      const rawViewportHeight = isCoarsePointer()
+        ? getStableViewportHeight()
+        : (window.visualViewport?.height ?? window.innerHeight);
+      let vvh = Math.max(0, rawViewportHeight - headerOffset);
       if (vvh <= 0) return;
 
       const prevVvh = lastVvhRef.current;
@@ -220,12 +206,13 @@ export function useMorphPinScroll(sectionId: string) {
         vvh = prevVvh;
       }
 
+      const isBrandBreak = root.hasAttribute("data-brand-break");
       const cssLetterRatio = Math.max(
         0,
         readCssNumber(root, "--morph-pin-letter-ratio", 0),
       );
       const letterRatio =
-        cssLetterRatio > 0 && root.hasAttribute("data-brand-break")
+        cssLetterRatio > 0 && isBrandBreak
           ? resolveBrandBreakLetterRatio(root, vvh)
           : cssLetterRatio;
       const imageRatio = readPositiveRatio(
@@ -245,29 +232,26 @@ export function useMorphPinScroll(sectionId: string) {
         1.2,
       );
       const titleGapPx = readCssNumber(root, "--morph-pin-title-gap", 0);
+      /* Enter (logo phải → đích): chỉ brand-break có; hero luôn 0 (không có
+         LogoComponent). Cộng vào alignUnstick để track có đủ chỗ cuộn. */
+      const enterRatio = isBrandBreak
+        ? readPositiveRatio(root, "--brand-break-enter-ratio", 0.14)
+        : 0;
+      const enterDist = vvh * enterRatio;
       const letterDist = vvh * letterRatio;
       const imageDist = vvh * imageRatio;
       const alignUnstick =
-        letterDist + (alignSpeed > 0 ? imageDist / alignSpeed : imageDist);
+        enterDist +
+        letterDist +
+        (alignSpeed > 0 ? imageDist / alignSpeed : imageDist);
 
       const prevMeasuredVvh = lastVvhRef.current;
       if (prevMeasuredVvh > 0 && Math.abs(vvh - prevMeasuredVvh) >= vvhSlack) {
         setCssVar(root, "--morph-pin-vvh", `${vvh}px`);
         setCssVar(root, "--morph-pin-collapse", `${alignUnstick}px`);
-        void scroller.offsetHeight;
-        const nearLetterHome =
-          root.hasAttribute("data-brand-break") &&
-          scroller.scrollTop <= letterDist;
-        if (!touching && !nearLetterHome) {
-          remapScrollTopForVvhChange(
-            scroller,
-            prevMeasuredVvh,
-            vvh,
-            letterRatio,
-            imageRatio,
-            alignSpeed,
-          );
-        }
+        /* Không còn remap scrollTop khi vvh đổi (không có scroller riêng để ghi
+           nữa) — localScrollTop đọc trực tiếp vị trí track mỗi frame nên tự
+           sửa đúng ở lần cuộn kế tiếp, không cần ghi đè window.scrollTo(). */
         frozenShiftRef.current = null;
         targetShiftRef.current = null;
         lastMeasureProgressRef.current = { pShrink: -1, pAlign: -1 };
@@ -277,10 +261,17 @@ export function useMorphPinScroll(sectionId: string) {
         setCssVar(root, "--morph-pin-letter-ratio-used", String(letterRatio));
       }
 
-      const scrollTop = scroller.scrollTop;
-      const morphScrollTop = brandBreakLetterArmed(root, scrollTop)
-        ? scrollTop
-        : 0;
+      /* Local scroll progress: 0 trước khi track chạm điểm sticky (track top ==
+         headerOffset), tăng 1:1 khi đang pin. Không cần chặn trần — mọi công
+         thức phía dưới đều tự clamp01. */
+      const trackTop = track.getBoundingClientRect().top;
+      const scrollTop = Math.max(0, headerOffset - trackTop);
+      /* Enter chạy TRƯỚC letter/exit trên cùng trục scrollTop — 2 pha tách
+         biệt tự nhiên theo vị trí cuộn, không chồng lấn nên không cần "armed"
+         nữa (trước đây cần khoá vì enter chạy timer riêng, có thể chưa xong
+         mà letter đã bắt đầu). */
+      const pEnter = enterDist > 0 ? clamp01(scrollTop / enterDist) : 1;
+      const morphScrollTop = Math.max(0, scrollTop - enterDist);
 
       const pLetter = letterDist > 0 ? clamp01(morphScrollTop / letterDist) : 1;
       const lettersOut = pLetter >= 1;
@@ -382,6 +373,36 @@ export function useMorphPinScroll(sectionId: string) {
         setCssVar(root, "--morph-pin-letter-x", "0px");
       }
 
+      /* Enter (logo phải → đích) — cùng kiểu so le với exit (top dẫn đầu,
+         bot theo sau), đối xứng 2 chiều tự nhiên theo scrollTop, không cần
+         timer/state machine riêng nữa. */
+      if (isBrandBreak) {
+        const vw = window.visualViewport?.width ?? window.innerWidth;
+        const enterStagger = readCssNumber(
+          root,
+          "--brand-break-enter-stagger",
+          0.12,
+        );
+        const enterFinish = readCssNumber(
+          root,
+          "--brand-break-enter-finish",
+          1,
+        );
+        for (const [i, id] of (["top", "mid", "bot"] as const).entries()) {
+          const p = staggerLetterExitProgress(
+            pEnter,
+            i,
+            enterStagger,
+            enterFinish,
+          );
+          setCssVar(root, `--morph-pin-enter-x-${id}`, enterOffsetPx(p, vw));
+        }
+        const nextLogo = pEnter >= 1 ? "rest" : "waiting";
+        if (root.dataset.brandBreakLogo !== nextLogo) {
+          root.dataset.brandBreakLogo = nextLogo;
+        }
+      }
+
       let contentShift = 0;
       if (lettersOut) {
         /* Đang chạm: giữ shift hiện tại — không đo (rect nhiễu). */
@@ -468,20 +489,23 @@ export function useMorphPinScroll(sectionId: string) {
       return;
     }
 
-    scroller.addEventListener("scroll", onScroll, { passive: true });
-    scroller.addEventListener("touchstart", onTouchStart, { passive: true });
-    scroller.addEventListener("touchend", onTouchEnd, { passive: true });
-    scroller.addEventListener("touchcancel", onTouchEnd, { passive: true });
+    window.addEventListener("scroll", onScroll, { passive: true });
+    document.addEventListener("touchstart", onTouchStart, { passive: true });
+    document.addEventListener("touchend", onTouchEnd, { passive: true });
+    document.addEventListener("touchcancel", onTouchEnd, { passive: true });
+    window.addEventListener("resize", sync);
+    window.visualViewport?.addEventListener("resize", sync);
     img?.addEventListener("load", onImageLoad);
     const observer = new ResizeObserver(sync);
-    observer.observe(scroller);
     observer.observe(root);
 
     return () => {
-      scroller.removeEventListener("scroll", onScroll);
-      scroller.removeEventListener("touchstart", onTouchStart);
-      scroller.removeEventListener("touchend", onTouchEnd);
-      scroller.removeEventListener("touchcancel", onTouchEnd);
+      window.removeEventListener("scroll", onScroll);
+      document.removeEventListener("touchstart", onTouchStart);
+      document.removeEventListener("touchend", onTouchEnd);
+      document.removeEventListener("touchcancel", onTouchEnd);
+      window.removeEventListener("resize", sync);
+      window.visualViewport?.removeEventListener("resize", sync);
       img?.removeEventListener("load", onImageLoad);
       observer.disconnect();
       if (frame) cancelAnimationFrame(frame);

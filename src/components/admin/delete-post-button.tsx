@@ -8,9 +8,15 @@ import { Button } from "@/components/ui/button";
 interface DeletePostButtonProps {
   postId: string;
   postTitle: string;
+  /** Bảng client-fetch (kéo thả/cuộn vô hạn) — gọi thay cho router.refresh(). */
+  onDeleted?: () => void;
 }
 
-export function DeletePostButton({ postId, postTitle }: DeletePostButtonProps) {
+export function DeletePostButton({
+  postId,
+  postTitle,
+  onDeleted,
+}: DeletePostButtonProps) {
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -30,7 +36,11 @@ export function DeletePostButton({ postId, postTitle }: DeletePostButtonProps) {
         throw new Error("Failed to delete");
       }
 
-      router.refresh();
+      if (onDeleted) {
+        onDeleted();
+      } else {
+        router.refresh();
+      }
     } catch {
       alert("Không thể xóa bài viết. Vui lòng thử lại.");
     } finally {

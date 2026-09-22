@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
-import { useFullPageScroll } from "@/lib/full-page-scroll/context";
+import { useFullPageScrollOptional } from "@/lib/full-page-scroll/context";
 import { cn } from "@/lib/utils";
 
 interface MovingLettersProps {
@@ -40,22 +40,27 @@ function prefersReducedMotion() {
 
 /** Play khi element nằm trong vùng nhìn thấy của inner scroll. */
 function useMovingLettersInView(sectionId: string, forcePlay = false) {
-  const { pager, getPanelMotionState } = useFullPageScroll();
-  const index = pager.sections.findIndex((section) => section.id === sectionId);
-  const motion = index >= 0 ? getPanelMotionState(index) : "inactive";
-  const ready = motion === "active" || motion === "entering";
+  /* Không có FullPageScrollRoot (vd. About sau khi bỏ full-page-scroll) → luôn
+     coi là "ready", chỉ dựa vào IntersectionObserver/scroll bên dưới để play. */
+  const context = useFullPageScrollOptional();
+  const index = context
+    ? context.pager.sections.findIndex((section) => section.id === sectionId)
+    : -1;
+  const motion =
+    context && index >= 0 ? context.getPanelMotionState(index) : "inactive";
+  const ready = context ? motion === "active" || motion === "entering" : true;
   const nodeRef = useRef<HTMLElement | null>(null);
-  const [play, setPlay] = useState(false);
+  /* forcePlay là derived-state (OR với internalPlay) thay vì set qua effect —
+     tránh setState đồng bộ ngay đầu effect (react-hooks/set-state-in-effect). */
+  const [internalPlay, setInternalPlay] = useState(false);
+  const play = forcePlay || internalPlay;
 
   const setRef = (node: HTMLElement | null) => {
     nodeRef.current = node;
   };
 
   useEffect(() => {
-    if (forcePlay) {
-      setPlay(true);
-      return;
-    }
+    if (forcePlay) return;
     if (!ready) return;
     const el = nodeRef.current;
     if (!el) return;
@@ -82,7 +87,7 @@ function useMovingLettersInView(sectionId: string, forcePlay = false) {
     const tryStart = () => {
       if (started || !isVisible()) return;
       started = true;
-      setPlay(true);
+      setInternalPlay(true);
     };
 
     tryStart();

@@ -24,7 +24,7 @@ export async function getSiteProjects(
         published: true,
         ...(category ? { category: { slug: category } } : {}),
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
       select: postForSiteProjectSelect,
     });
 

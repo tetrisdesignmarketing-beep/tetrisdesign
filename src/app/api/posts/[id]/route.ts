@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { postSchema } from "@/lib/validations/post";
+import { postFeaturedPatchSchema, postSchema } from "@/lib/validations/post";
 import { slugSchema } from "@/lib/validations/shared";
 import { slugify } from "@/lib/utils";
 
@@ -31,6 +31,45 @@ export async function GET(_request: Request, context: RouteContext) {
   } catch {
     return NextResponse.json(
       { error: "Failed to fetch post" },
+      { status: 500 },
+    );
+  }
+}
+
+/** Bật/tắt nhanh "ưu tiên" từ bảng quản lý — không cần gửi lại cả form. */
+export async function PATCH(request: Request, context: RouteContext) {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id } = await context.params;
+
+  const body = await request.json().catch(() => null);
+  const parsed = postFeaturedPatchSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Validation failed", details: parsed.error.flatten() },
+      { status: 400 },
+    );
+  }
+
+  try {
+    const existing = await prisma.post.findUnique({ where: { id } });
+    if (!existing) {
+      return NextResponse.json({ error: "Post not found" }, { status: 404 });
+    }
+
+    const post = await prisma.post.update({
+      where: { id },
+      data: { featured: parsed.data.featured },
+    });
+
+    return NextResponse.json(post);
+  } catch (err) {
+    console.error("Toggle post featured error:", err);
+    return NextResponse.json(
+      { error: "Không thể cập nhật" },
       { status: 500 },
     );
   }
@@ -67,6 +106,7 @@ export async function PUT(request: Request, context: RouteContext) {
       images,
       layoutStyle,
       published,
+      featured,
       address,
       concept,
       description,
@@ -123,6 +163,7 @@ export async function PUT(request: Request, context: RouteContext) {
         images,
         layoutStyle,
         published,
+        featured,
       },
     });
 

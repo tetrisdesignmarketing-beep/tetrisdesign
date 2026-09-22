@@ -4,7 +4,7 @@
     fill="#231f20"
   />
   <!-- Tetris logo mark (3 khối, khớp public/logo.svg) — màu trắng, thay icon lưới 4 ô cũ -->
-  <g transform="translate(12 8) scale(0.03125)" fill="#ffffff">
+  <g transform="translate(12 12) scale(0.03125)" fill="#ffffff">
     <rect x="0" y="54" width="174" height="120" />
     <rect x="174" y="174" width="164" height="164" />
     <rect x="338" y="338" width="174" height="120" />

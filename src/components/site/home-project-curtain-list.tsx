@@ -125,6 +125,13 @@ export function HomeProjectCurtainList({
     };
   }, [sectionId, reduceMotion, latchSection, gate]);
 
+  const list =
+    items ??
+    projects.map<ProjectCurtainItem>((project) => ({
+      key: project.slug,
+      project,
+    }));
+
   return (
     <ul
       ref={listRef}
@@ -135,13 +142,7 @@ export function HomeProjectCurtainList({
         className,
       )}
     >
-      {(
-        items ??
-        projects.map<ProjectCurtainItem>((project) => ({
-          key: project.slug,
-          project,
-        }))
-      ).map((item) => (
+      {list.map((item, index) => (
           <HomeProjectCurtainCard
             key={item.key}
             project={item.project}
@@ -152,6 +153,11 @@ export function HomeProjectCurtainList({
             sectionReady={sectionReady}
             headerOffset={headerOffset}
             reduceMotion={reduceMotion}
+            className={
+              cardVariant === "home" && list.length === 9 && index === 8
+                ? "hidden md:block"
+                : undefined
+            }
           />
         ))}
     </ul>

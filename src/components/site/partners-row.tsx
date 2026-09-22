@@ -116,6 +116,16 @@ export function PartnersRow({
               enabled: true,
               momentum: false,
             }}
+            // `waitForTransition: false` — mặc định Swiper CHỜ 1 sự kiện DOM
+            // "transitionend" trên wrapper trước khi tự resume autoplay sau khi
+            // pause do tương tác (chạm/kéo/rời trang). Với freeMode + momentum:
+            // false, cú "nhả tay" không phải lúc nào cũng áp CSS transition thật
+            // (tuỳ trình duyệt/thiết bị) → "transitionend" có thể KHÔNG BAO GIỜ
+            // bắn ra, autoplay bị kẹt "paused" vĩnh viễn ngay sau lần chạm đầu
+            // tiên — đúng triệu chứng "1 số thiết bị không auto slide". Tắt chờ
+            // này để resume ngay lập tức, không phụ thuộc sự kiện DOM có thể
+            // không xảy ra (đã xác nhận qua source `node_modules/swiper/modules
+            // /autoplay.min.mjs`, không phải đoán).
             autoplay={
               reducedMotion
                 ? false
@@ -123,15 +133,22 @@ export function PartnersRow({
                     delay: 0,
                     disableOnInteraction: false,
                     pauseOnMouseEnter: false,
+                    waitForTransition: false,
                   }
             }
             watchSlidesProgress
+            observer
+            observeParents
             data-partners-logos=""
             data-section-body=""
             data-text-focus-in={logoEffect === "text-focus-in" ? "" : undefined}
             aria-label={title}
             onTouchEnd={(swiper) => {
-              if (!swiper.autoplay.running) swiper.autoplay.start();
+              // Lưới an toàn dự phòng (không còn là fix chính — xem giải thích ở
+              // `autoplay` phía trên): check đúng field `paused` (không phải
+              // `running`, field này Swiper không tự tắt khi chỉ pause) rồi resume.
+              if (swiper.autoplay.paused) swiper.autoplay.resume();
+              else if (!swiper.autoplay.running) swiper.autoplay.start();
             }}
           >
             {loopSlides.map((partner, index) => (

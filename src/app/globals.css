@@ -1019,9 +1019,11 @@ html:has([data-full-page-scroll-active]) main {
   --morph-pin-title-gap: 100px;
   --morph-pin-align-speed: 1.35;
   --brand-break-logo-w: 90vw;
-  --brand-break-enter-hold: 0.1s;
-  --brand-break-enter-duration: 0.45s;
-  --brand-break-enter-stagger: 0.12s;
+  /* Enter (logo phải → đích) — cùng kiểu so le với exit bên dưới, tính theo
+     scrollTop (không phải thời gian) nên đối xứng tự nhiên khi cuộn ngược. */
+  --brand-break-enter-ratio: 0.14;
+  --brand-break-enter-stagger: 0.12;
+  --brand-break-enter-finish: 1;
   /* Exit trải suốt letter phase — tránh vùng chết sau finish sớm */
   --brand-break-exit-stagger: 0.1;
   --brand-break-exit-finish: 1;
@@ -1095,7 +1097,10 @@ html:has([data-full-page-scroll-active]) main {
 
 [data-morph-pin-pin] {
   position: sticky;
-  top: 0;
+  /* Trước: top:0 — đúng khi bọc trong full-page-scroll panel (đã tự nằm sát
+     header). Giờ About cuộn bình thường trong normal flow, cần offset đúng
+     header cố định — cùng pattern với .project-detail-images__veil. */
+  top: var(--site-header-total-height);
   z-index: 10;
   /* Cho touch xuống inner scroller — không để pin / ảnh nuốt pan */
   pointer-events: none;
@@ -1150,9 +1155,18 @@ html:has([data-full-page-scroll-active]) main {
   will-change: transform;
 }
 
-/* Chỉ bù khi flow (shift đã freeze) — tránh co scrollHeight giữa align → kẹt momentum */
+/* Flow (shift đã freeze): đổi từ "transform + bù margin-bottom" sang "margin-top thật".
+   Lý do: margin-bottom trên phần tử CUỐI CÙNG của root chỉ co được scrollHeight của
+   TRANG nếu nó "collapse-through" hết root → <main> → <body>. <main> là 1 flex item
+   (body dùng flex flex-col) — theo spec, margin của con cháu KHÔNG được collapse-through
+   ra khỏi 1 flex item, nên margin-bottom tính đúng số (âm) nhưng không thật sự co chiều
+   cao tài liệu, để lại khoảng trắng dưới footer khi không còn full-page-scroll clip nữa
+   (trước đây vô hại vì bị overflow:hidden của khung 1-màn-hình cắt ẩn đi).
+   margin-top giữa 2 anh em (track → content, cùng 1 cha) luôn cộng dồn cục bộ, không
+   cần thoát ra ngoài root — co đúng chiều cao tài liệu ở mọi trường hợp. */
 [data-morph-pin-phase="flow"] [data-morph-pin-content] {
-  margin-bottom: min(0px, var(--morph-pin-content-shift, 0px));
+  transform: none;
+  margin-top: min(0px, var(--morph-pin-content-shift, 0px));
 }
 
 [data-logo-component] {
@@ -1167,7 +1181,8 @@ html:has([data-full-page-scroll-active]) main {
 }
 
 /*
-  Enter: JS gán transform px trên [data-logo-block].
+  Enter: khối [data-logo-block] trượt phải → đích, tính liên tục theo scrollTop
+  (--morph-pin-enter-x-*), cùng kiểu so le top→mid→bot với exit bên dưới.
   Biến mất: face dịch trái tuần tự top→mid→bot (--morph-pin-letter-x-*).
 */
 [data-logo-block] {
@@ -1175,11 +1190,31 @@ html:has([data-full-page-scroll-active]) main {
   display: block;
   will-change: transform;
   backface-visibility: hidden;
-  transform: translate3d(100vw, 0, 0);
+  transform: translate3d(var(--morph-pin-enter-x, 100vw), 0, 0);
 }
 
-[data-brand-break-logo="rest"] [data-logo-block] {
-  transform: translate3d(0, 0, 0);
+[data-logo-block="top"] {
+  transform: translate3d(
+    var(--morph-pin-enter-x-top, var(--morph-pin-enter-x, 100vw)),
+    0,
+    0
+  );
+}
+
+[data-logo-block="mid"] {
+  transform: translate3d(
+    var(--morph-pin-enter-x-mid, var(--morph-pin-enter-x, 100vw)),
+    0,
+    0
+  );
+}
+
+[data-logo-block="bot"] {
+  transform: translate3d(
+    var(--morph-pin-enter-x-bot, var(--morph-pin-enter-x, 100vw)),
+    0,
+    0
+  );
 }
 
 [data-logo-block-face] {
@@ -1218,8 +1253,7 @@ html:has([data-full-page-scroll-active]) main {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  [data-logo-block],
-  [data-brand-break-logo="rest"] [data-logo-block] {
+  [data-logo-block] {
     transform: none;
     will-change: auto;
   }
@@ -2457,7 +2491,7 @@ html[data-lightbox-open] .site-header {
   place-items: center;
   width: 100%;
   overflow: visible;
-  padding-top: 8vh;
+  padding-top: calc(8vh + 24px); /* +24px cách ảnh/nội dung phía trên */
 }
 
 .project-detail-related .text {

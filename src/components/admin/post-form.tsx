@@ -50,6 +50,7 @@ export function PostForm({ initialData, categories, mode }: PostFormProps) {
       images: [],
       layoutStyle: "LAYOUTDEFAULT",
       published: false,
+      featured: false,
     },
   });
 
@@ -227,6 +228,18 @@ export function PostForm({ initialData, categories, mode }: PostFormProps) {
         />
         <Label htmlFor="published" className="font-normal">
           Xuất bản
+        </Label>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <input
+          type="checkbox"
+          id="featured"
+          className="h-4 w-4 rounded border-input"
+          {...register("featured")}
+        />
+        <Label htmlFor="featured" className="font-normal">
+          Ưu tiên hiển thị đầu trang chủ
         </Label>
       </div>
 

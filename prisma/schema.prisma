@@ -58,18 +58,23 @@ model Post {
   /// Gallery layout trên trang detail — map `SiteProject.layoutStyle`
   layoutStyle PostLayoutStyle @default(LAYOUT1)
   published   Boolean         @default(false)
+  /// Ưu tiên hiển thị đầu trang chủ, không phân biệt category (xem getHomeProjects).
+  featured    Boolean         @default(false)
   categoryId  String?
   category    Category?       @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   /// @deprecated — không dùng form/API admin; /blog còn đọc
   content     String?         @db.Text
   /// @deprecated — không dùng form/API admin; /blog còn đọc
   excerpt     String?
+  /// Thứ tự thủ công — admin kéo thả ở /admin/posts; cũng dùng để sắp xếp danh sách public.
+  sortOrder   Int             @default(0)
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
 
   @@index([published, createdAt(sort: Desc)])
   @@index([slug])
   @@index([categoryId])
+  @@index([sortOrder])
 }
 
 model Media {

@@ -52,6 +52,7 @@ export default async function EditPostPage({ params }: EditPostPageProps) {
               images: post.images,
               layoutStyle: post.layoutStyle,
               published: post.published,
+              featured: post.featured,
             }}
           />
         </CardContent>

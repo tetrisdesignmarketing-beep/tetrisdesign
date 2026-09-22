@@ -91,6 +91,14 @@ export default async function ProjectDetailPage({
       );
   }
 
+  const projectDetailContent = project.description ? (
+    <ProjectDetailContent
+      concept={project.categoryLabel}
+      address={project.location}
+      description={project.description}
+    />
+  ) : null;
+
   return (
     <article data-project-detail>
       {layoutStyle === "LAYOUT1" ? (
@@ -102,15 +110,17 @@ export default async function ProjectDetailPage({
         />
       ) : null}
 
-      {gallery}
-
-      {project.description ? (
-        <ProjectDetailContent
-          concept={project.categoryLabel}
-          address={project.location}
-          description={project.description}
-        />
-      ) : null}
+      {layoutStyle === "LAYOUTDEFAULT" ? (
+        <>
+          {projectDetailContent}
+          {gallery}
+        </>
+      ) : (
+        <>
+          {gallery}
+          {projectDetailContent}
+        </>
+      )}
 
       <ProjectShowcase projects={related} scrollEffectMode />
 
