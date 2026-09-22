@@ -3,9 +3,10 @@
     d="M20 0C31.046 0 40 8.954 40 20c0 12.5-20 32-20 32S0 32.5 0 20C0 8.954 8.954 0 20 0Z"
     fill="#231f20"
   />
-  <rect x="13" y="9" width="14" height="14" rx="1.5" fill="#ffffff" />
-  <rect x="15" y="11" width="4" height="4" fill="#231f20" />
-  <rect x="21" y="11" width="4" height="4" fill="#231f20" />
-  <rect x="15" y="17" width="4" height="4" fill="#231f20" />
-  <rect x="21" y="17" width="4" height="4" fill="#231f20" />
+  <!-- Tetris logo mark (3 khối, khớp public/logo.svg) — màu trắng, thay icon lưới 4 ô cũ -->
+  <g transform="translate(12 8) scale(0.03125)" fill="#ffffff">
+    <rect x="0" y="54" width="174" height="120" />
+    <rect x="174" y="174" width="164" height="164" />
+    <rect x="338" y="338" width="174" height="120" />
+  </g>
 </svg>

@@ -26,7 +26,8 @@ export const heroSlideSchema = z.object({
   image: mediaPathSchema,
   title: z.string().min(1, "Tiêu đề slide không được để trống").max(200),
   location: z.string().min(1, "Địa điểm không được để trống").max(200),
-  href: z.string().min(1, "Link không được để trống").max(500),
+  /** Để trống → nút "XEM DỰ ÁN" fallback sang /projects (xem resolveHeroSlideHref). */
+  href: z.string().max(500).optional().default(""),
   /** Legacy JSON thiếu field → MOBILE. */
   screenType: heroScreenTypeSchema.default("MOBILE"),
 });
@@ -39,7 +40,8 @@ export const homePageSchema = z.object({
 export const homePageFormSlideSchema = z.object({
   title: z.string().min(1, "Tiêu đề slide không được để trống").max(200),
   location: z.string().min(1, "Địa điểm không được để trống").max(200),
-  href: z.string().min(1, "Link không được để trống").max(500),
+  /** Để trống → nút "XEM DỰ ÁN" fallback sang /projects. */
+  href: z.string().max(500),
   mobileImage: mediaPathSchema,
   desktopImage: mediaPathSchema,
 });

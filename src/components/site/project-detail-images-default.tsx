@@ -51,7 +51,9 @@ export function ProjectDetailImagesDefault({
               layout="flow"
               loading={index < EAGER_COUNT ? "eager" : "lazy"}
               sizes="100vw"
-              className="project-detail-images-default__img lg:h-auto lg:w-full lg:max-h-[70vh] lg:max-w-full lg:object-contain lg:object-center"
+              // Desktop sizing (100vw × chiều cao còn lại dưới menu, object-fit: contain)
+              // đã khai báo đủ trong globals.css — không cần lặp lại bằng Tailwind ở đây.
+              className="project-detail-images-default__img"
             />
           </button>
         </figure>

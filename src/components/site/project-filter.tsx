@@ -1,12 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
-import { useSiteLoading } from "@/components/site/site-loading-context";
-import {
-  parseProjectCategory,
-  projectCategories,
-} from "@/lib/site-content";
+import { usePathname } from "next/navigation";
+import { useProjectsCategory } from "@/components/site/projects-category-context";
+import { projectCategories } from "@/lib/site-content";
 import { cn } from "@/lib/utils";
 
 interface ProjectFilterProps {
@@ -14,15 +11,15 @@ interface ProjectFilterProps {
   stickTo?: "header" | "scroller";
 }
 
+/**
+ * Chuyển tab category qua `ProjectsCategoryProvider` (state client, không
+ * `router.push`) — data toàn bộ dự án đã fetch 1 lần, đổi tab lọc tức thì,
+ * không còn màn loading / gọi API lại. `<Link>` vẫn giữ `href` đúng cho
+ * accessibility / mở tab mới; `onClick` chặn điều hướng mặc định.
+ */
 export function ProjectFilter({ stickTo = "header" }: ProjectFilterProps) {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const { navigateWithLoading } = useSiteLoading();
-  const active = parseProjectCategory(searchParams.get("category") ?? undefined);
-
-  const go = (href: string) => {
-    navigateWithLoading(href, { scroll: false });
-  };
+  const { category: active, setCategory } = useProjectsCategory();
 
   return (
     <nav
@@ -50,7 +47,7 @@ export function ProjectFilter({ stickTo = "header" }: ProjectFilterProps) {
                 prefetch={false}
                 onClick={(event) => {
                   event.preventDefault();
-                  go(href);
+                  setCategory(isActive ? null : category.id);
                 }}
                 className={cn(
                   "inline-flex min-h-11 items-center justify-center touch-manipulation text-xs font-medium uppercase tracking-[0.25em]",
@@ -77,7 +74,7 @@ export function ProjectFilter({ stickTo = "header" }: ProjectFilterProps) {
             onClick={(event) => {
               event.preventDefault();
               if (active === null) return;
-              go(pathname);
+              setCategory(null);
             }}
             className={cn(
               "inline-flex min-h-11 items-center justify-center border-b border-transparent pb-0.5 text-sm font-medium uppercase tracking-[0.25em] text-foreground transition-colors",
@@ -103,7 +100,7 @@ export function ProjectFilter({ stickTo = "header" }: ProjectFilterProps) {
                 onClick={(event) => {
                   event.preventDefault();
                   if (isActive) return;
-                  go(href);
+                  setCategory(category.id);
                 }}
                 className={cn(
                   "inline-flex min-h-11 items-center justify-center border-b border-transparent pb-0.5 text-sm font-medium uppercase tracking-[0.25em] text-foreground transition-colors",

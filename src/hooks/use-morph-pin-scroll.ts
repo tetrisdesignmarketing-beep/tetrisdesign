@@ -27,13 +27,6 @@ function setCssVar(el: HTMLElement, name: string, value: string) {
   el.style.setProperty(name, value);
 }
 
-function isCoarsePointer(): boolean {
-  return (
-    window.matchMedia("(pointer: coarse)").matches ||
-    window.matchMedia("(max-width: 767px)").matches
-  );
-}
-
 function clamp01(value: number): number {
   return Math.min(1, Math.max(0, value));
 }
@@ -125,21 +118,6 @@ function measureVisualImageBottom(wrapper: HTMLElement): number {
   return contentTop + extraH * posY + renderedH;
 }
 
-function measurePhotoClipPercent(root: HTMLElement): number {
-  const pin = root.querySelector("[data-morph-pin-pin]");
-  const image = root.querySelector("[data-morph-pin-image]");
-  if (!(pin instanceof HTMLElement) || !(image instanceof HTMLElement)) {
-    return 0;
-  }
-
-  const pinRect = pin.getBoundingClientRect();
-  if (pinRect.height < 1) return 0;
-
-  const photoBottom = measureVisualImageBottom(image);
-  const clipPx = Math.max(0, pinRect.bottom - photoBottom);
-  return Math.min(100, (clipPx / pinRect.height) * 100);
-}
-
 /** Giữ phase morph khi inner viewport đổi. Extra sau unstick giữ px. */
 function remapScrollTopForVvhChange(
   scroller: HTMLElement,
@@ -210,8 +188,6 @@ export function useMorphPinScroll(sectionId: string) {
   const lastMeasureProgressRef = useRef({ pShrink: -1, pAlign: -1 });
   const lastVvhRef = useRef(0);
   const shiftRef = useRef(0);
-  const lastPhotoClipRef = useRef("0%");
-  const lastClipShrinkRef = useRef(-1);
   const { pager, getPanelMotionState } = useFullPageScroll();
   const index = pager.sections.findIndex((section) => section.id === sectionId);
   const motion = index >= 0 ? getPanelMotionState(index) : "inactive";
@@ -308,7 +284,7 @@ export function useMorphPinScroll(sectionId: string) {
 
       const pLetter = letterDist > 0 ? clamp01(morphScrollTop / letterDist) : 1;
       const lettersOut = pLetter >= 1;
-      let pImage =
+      const pImage =
         lettersOut && imageDist > 0
           ? clamp01((morphScrollTop - letterDist) / imageDist)
           : 0;
@@ -356,6 +332,22 @@ export function useMorphPinScroll(sectionId: string) {
       const pin = root.querySelector("[data-morph-pin-pin]");
       if (pin instanceof HTMLElement && pin.style.marginTop) {
         pin.style.removeProperty("margin-top");
+      }
+
+      /* About Hero: đảm bảo ảnh ở vị trí đích luôn < 90% chiều rộng cột text
+         trên MỌI màn hình. Cột text = min(vw, 768px) − 28px×2 padding.
+         Với vw >= 768px: cột = 712px → 90% = 640.8px → endScale = min(0.6, 640.8 / vw).
+         Với vw < 768px (mobile): không set gì — giữ nguyên default CSS 0.6, đảm bảo
+         không thay đổi hành vi trên điện thoại. Đọc window.innerWidth — rẻ, không
+         forced layout (không dùng getBoundingClientRect). */
+      if (root.hasAttribute("data-about-hero-morph")) {
+        const heroVw = window.visualViewport?.width ?? window.innerWidth;
+        if (heroVw >= 768) {
+          const endScale = Math.min(0.6, 640.8 / heroVw);
+          setCssVar(root, "--morph-pin-image-end-scale", String(endScale));
+        } else if (root.style.getPropertyValue("--morph-pin-image-end-scale")) {
+          root.style.removeProperty("--morph-pin-image-end-scale");
+        }
       }
 
       setCssVar(root, "--morph-pin-vvh", `${vvh}px`);
@@ -414,8 +406,8 @@ export function useMorphPinScroll(sectionId: string) {
            */
           const last = lastMeasureProgressRef.current;
           const progressMoved =
-            Math.abs(pShrink - last.pShrink) > 0.001 ||
-            Math.abs(pAlign - last.pAlign) > 0.001;
+            Math.abs(pShrink - last.pShrink) > 0.02 ||
+            Math.abs(pAlign - last.pAlign) > 0.02;
           const needMeasure =
             targetShiftRef.current === null ||
             (!shrinkDone && progressMoved) ||
@@ -444,20 +436,6 @@ export function useMorphPinScroll(sectionId: string) {
 
       setCssVar(root, "--morph-pin-collapse", `${alignUnstick}px`);
       setCssVar(root, "--morph-pin-content-shift", `${contentShift}px`);
-      const skipClip = isCoarsePointer();
-      if (skipClip || !lettersOut) {
-        lastPhotoClipRef.current = "0%";
-        lastClipShrinkRef.current = -1;
-        setCssVar(root, "--morph-pin-photo-clip", "0%");
-      } else if (
-        Math.abs(pShrink - lastClipShrinkRef.current) > 0.02 ||
-        lastPhotoClipRef.current === "0%"
-      ) {
-        const next = `${measurePhotoClipPercent(root)}%`;
-        lastPhotoClipRef.current = next;
-        lastClipShrinkRef.current = pShrink;
-        setCssVar(root, "--morph-pin-photo-clip", next);
-      }
     };
 
     const onScroll = () => {

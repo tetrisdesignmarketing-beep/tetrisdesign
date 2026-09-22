@@ -69,7 +69,11 @@ export function PartnersRow({
 }: PartnersRowProps) {
   const reducedMotion = usePrefersReducedMotion();
   const loopSlides = buildLoopSlides(partners);
-  const useMarquee = !reducedMotion && loopSlides.length > 0;
+  /* Luôn dùng Swiper khi có partner — đảm bảo CHỈ 1 hàng (flex nowrap) trên
+     mọi màn hình/thiết bị. Trước đây reduced-motion rơi về <ul grid-cols-3>,
+     wrap thành nhiều hàng khi > 3 partner. Tôn trọng reduced-motion bằng cách
+     tắt autoplay (không tự trượt) chứ không đổi layout. */
+  const useMarquee = loopSlides.length > 0;
 
   return (
     <section className={cn("py-12 pb-16", className)}>
@@ -89,7 +93,7 @@ export function PartnersRow({
         )}
       </h2>
 
-      {partners.length === 0 ? null : useMarquee ? (
+      {!useMarquee ? null : (
         <div
           data-partners-scroll=""
           className="partners-marquee mt-10 md:mt-12"
@@ -112,11 +116,15 @@ export function PartnersRow({
               enabled: true,
               momentum: false,
             }}
-            autoplay={{
-              delay: 0,
-              disableOnInteraction: false,
-              pauseOnMouseEnter: false,
-            }}
+            autoplay={
+              reducedMotion
+                ? false
+                : {
+                    delay: 0,
+                    disableOnInteraction: false,
+                    pauseOnMouseEnter: false,
+                  }
+            }
             watchSlidesProgress
             data-partners-logos=""
             data-section-body=""
@@ -137,22 +145,6 @@ export function PartnersRow({
             ))}
           </Swiper>
         </div>
-      ) : (
-        <ul
-          data-partners-logos=""
-          data-section-body=""
-          data-text-focus-in={logoEffect === "text-focus-in" ? "" : undefined}
-          className="mt-10 grid grid-cols-3 items-center justify-items-center gap-6 md:mt-12 md:gap-16"
-        >
-          {partners.map((partner) => (
-            <li
-              key={partner.name}
-              className="flex w-full items-center justify-center"
-            >
-              <PartnerLogo {...partner} />
-            </li>
-          ))}
-        </ul>
       )}
     </section>
   );

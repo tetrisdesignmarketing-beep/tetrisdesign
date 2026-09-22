@@ -22,7 +22,7 @@ import {
 const emptySlide: HomePageFormValues["slides"][number] = {
   title: "",
   location: "",
-  href: "/projects",
+  href: "",
   mobileImage: "",
   desktopImage: "",
 };
@@ -165,12 +165,17 @@ export function HomePageForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor={`slide-href-${index}`}>Link</Label>
+            <Label htmlFor={`slide-href-${index}`}>
+              Link nút &quot;XEM DỰ ÁN&quot;
+            </Label>
             <Input
               id={`slide-href-${index}`}
               placeholder="/projects/d-chic"
               {...register(`slides.${index}.href`)}
             />
+            <p className="text-xs text-muted-foreground">
+              Để trống → nút tự động chuyển đến trang Dự án (/projects).
+            </p>
             <FieldError message={errors.slides?.[index]?.href?.message} />
           </div>
         </div>

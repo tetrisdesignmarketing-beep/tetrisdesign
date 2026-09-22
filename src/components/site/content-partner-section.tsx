@@ -69,7 +69,18 @@ function useContentPartnerReveal(logoPhase?: BrandBreakLogoPhase) {
 
     if (tryStart()) return;
 
-    scroller?.addEventListener("scroll", tryStart, { passive: true });
+    /* rAF-coalesce: 'scroll' có thể bắn nhiều lần/frame lúc momentum trên iOS —
+       tránh gọi getBoundingClientRect (tryStart) không giới hạn tần suất. */
+    let scrollFrame = 0;
+    const onScroll = () => {
+      if (scrollFrame) return;
+      scrollFrame = requestAnimationFrame(() => {
+        scrollFrame = 0;
+        tryStart();
+      });
+    };
+
+    scroller?.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", tryStart);
     const observer = new IntersectionObserver(tryStart, { threshold: 0 });
     observer.observe(el);
@@ -80,10 +91,11 @@ function useContentPartnerReveal(logoPhase?: BrandBreakLogoPhase) {
     }
 
     return () => {
-      scroller?.removeEventListener("scroll", tryStart);
+      scroller?.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", tryStart);
       observer.disconnect();
       window.clearTimeout(restFallback);
+      if (scrollFrame) cancelAnimationFrame(scrollFrame);
     };
   }, [visible, logoPhase]);
 

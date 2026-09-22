@@ -562,6 +562,15 @@ html:has([data-full-page-scroll-active]) main {
   /* Chạm đáy inner scroll → sau delay bỏ blur (text cuối không bị mờ vĩnh viễn) */
   --about-scroll-blur-settle-ms: 200;
   --about-section-title-tracking: 0.08em;
+  padding-bottom: 0px;
+}
+
+/* Desktop (md+): khối text cách bottom (đáy khu vực scroll) thêm 16px.
+   Mobile không set — giữ nguyên 0px, không đổi hành vi. */
+@media (min-width: 768px) {
+  [data-about-intro] {
+    padding-bottom: 16px;
+  }
 }
 
 [data-content-partner] {
@@ -996,7 +1005,6 @@ html:has([data-full-page-scroll-active]) main {
   --morph-pin-shrink-speed: 1.2;
   --morph-pin-align-speed: 1.2;
   --morph-pin-content-shift: 0px;
-  --morph-pin-photo-clip: 0%;
   --morph-pin-vvh-slack: 48px;
 }
 
@@ -1017,6 +1025,13 @@ html:has([data-full-page-scroll-active]) main {
   /* Exit trải suốt letter phase — tránh vùng chết sau finish sớm */
   --brand-break-exit-stagger: 0.1;
   --brand-break-exit-finish: 1;
+}
+
+/* Desktop (lg+): logo brand-break nhỏ lại, tránh chiếm quá nhiều màn hình rộng */
+@media (min-width: 1024px) {
+  [data-brand-break] {
+    --brand-break-logo-w: 50vw;
+  }
 }
 
 /* Chưa rest: khóa letter exit — tránh vuốt sớm làm mất logo trước enter */
@@ -1048,7 +1063,8 @@ html:has([data-full-page-scroll-active]) main {
 }
 
 [data-about-hero-morph] {
-  --morph-pin-title-gap: 48px;
+  /* +32px so với 48px gốc — tăng khoảng cách text–ảnh khi ảnh đã về vị trí đích */
+  --morph-pin-title-gap: 80px;
   --morph-pin-align-speed: 2;
 }
 
@@ -2099,8 +2115,14 @@ ul:has(.project-card-hover-scale) {
   height: auto;
 }
 
-/* Desktop: full content width; cap height so portrait fits viewport */
+/* Desktop: ảnh to hết mức trong khung (100vw × chiều cao còn lại dưới menu) mà
+   vẫn vừa 1 màn hình — object-fit: contain tự quyết theo tỉ lệ ảnh:
+   ảnh dọc chạm trên dưới (viền menu → đáy màn hình), ảnh ngang chạm 2 biên. */
 @media (min-width: 1024px) {
+  .project-detail-images-default {
+    padding-inline: 0;
+  }
+
   .project-detail-images-default__item {
     display: flex;
     justify-content: center;
@@ -2116,7 +2138,7 @@ ul:has(.project-card-hover-scale) {
     width: 100%;
     max-width: 100%;
     height: auto;
-    max-height: 70vh;
+    max-height: calc(100dvh - var(--site-header-total-height));
     object-fit: contain;
     object-position: center;
   }
@@ -2533,12 +2555,17 @@ html[data-lightbox-open] .site-header {
   .project-detail-related {
     --grid-columns-full: var(--related-cols-desktop, 5);
     --grid-rows-full: var(--related-rows-desktop, 4);
-    --grid-gap: 1.75rem;
+    --grid-gap: 2rem; /* tăng nhẹ từ 1.75rem — thêm khoảng cách giữa các item */
   }
 
+  /* Thu nhỏ + căn giữa cả khối grid trên desktop (không đổi số cột/hàng, không
+     đụng .grid__item) — khớp chuẩn max-w-6xl (1152px) của site, tạo lề 2 bên
+     tự nhiên trên màn rộng. Chỉ desktop, không ảnh hưởng mobile. */
   .project-detail-related .grid--full {
+    max-width: 1152px;
+    margin: 38px auto 0;
     aspect-ratio: var(--related-aspect-desktop, 5 / 4);
-    padding: var(--grid-gap) 1.5rem;
+    padding: var(--grid-gap) 2rem;
   }
 
   .project-detail-related .grid__item:nth-child(n + 10) {

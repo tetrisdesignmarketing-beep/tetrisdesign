@@ -10,6 +10,15 @@ export type HeroSlideView = {
   desktopImage: string;
 };
 
+/** Nút "XEM DỰ ÁN" fallback khi admin chưa gán link riêng cho slide. */
+export const DEFAULT_HERO_SLIDE_HREF = "/projects";
+
+/** Chưa gán link (rỗng/toàn khoảng trắng) → fallback /projects. */
+export function resolveHeroSlideHref(href: string | undefined | null): string {
+  const trimmed = href?.trim();
+  return trimmed ? trimmed : DEFAULT_HERO_SLIDE_HREF;
+}
+
 /** Ghép MOBILE[i] + DESKTOP[i]; thiếu một phía → dùng ảnh còn lại. */
 export function pairHeroSlidesByScreen(slides: HeroSlide[]): HeroSlideView[] {
   const mobile = slides.filter((slide) => slide.screenType !== "DESKTOP");
@@ -19,7 +28,7 @@ export function pairHeroSlidesByScreen(slides: HeroSlide[]): HeroSlideView[] {
     return mobile.map((slide) => ({
       title: slide.title,
       location: slide.location,
-      href: slide.href,
+      href: resolveHeroSlideHref(slide.href),
       mobileImage: slide.image,
       desktopImage: slide.image,
     }));
@@ -35,7 +44,7 @@ export function pairHeroSlidesByScreen(slides: HeroSlide[]): HeroSlideView[] {
     paired.push({
       title: meta.title,
       location: meta.location,
-      href: meta.href,
+      href: resolveHeroSlideHref(meta.href),
       mobileImage: mobileSlide?.image ?? desktopSlide?.image ?? "",
       desktopImage: desktopSlide?.image ?? mobileSlide?.image ?? "",
     });
