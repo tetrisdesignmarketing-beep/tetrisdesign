@@ -41,6 +41,12 @@ export function useFullPageScroll(): FullPageScrollContextValue {
   return context;
 }
 
+/** Như `useFullPageScroll` nhưng không throw — null nếu không có
+ * `FullPageScrollRoot` bao ngoài (trang cuộn bình thường, vd /services). */
+export function useFullPageScrollOptional(): FullPageScrollContextValue | null {
+  return useContext(FullPageScrollContext);
+}
+
 export function getPanelMotionState(
   index: number,
   currentIndex: number,
