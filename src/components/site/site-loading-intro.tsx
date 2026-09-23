@@ -13,6 +13,7 @@ export function SiteLoadingIntro() {
     } catch {
       /* private mode */
     }
+    document.documentElement.setAttribute("data-intro-done", "");
     setOpen(false);
   }, []);
 
@@ -26,5 +27,5 @@ export function SiteLoadingIntro() {
 
   if (!open) return null;
 
-  return <SiteLoadingRun onDone={hide} />;
+  return <SiteLoadingRun onDone={hide} intro />;
 }

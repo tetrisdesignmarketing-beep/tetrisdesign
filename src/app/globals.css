@@ -23,7 +23,11 @@
   --ring: var(--brand-black);
   --radius: 0.5rem;
   --logo-default-font: "Fashion Didot W90 Regular", serif;
-  --font-ui: "UTM Avo", var(--font-geist-sans), sans-serif;
+  --font-ui: "Gilroy", var(--font-geist-sans), sans-serif;
+  /* Label chung (menu, tiêu đề/tên dự án ở lưới home…) — đổi 1 chỗ, áp mọi
+     nơi dùng. Trang khác: dùng class .site-label-text hoặc 2 biến này. */
+  --site-label-font-size: 0.875rem;
+  --site-label-font-weight: 500;
   --site-header-pad-top: 25px;
   --site-header-pad-bottom: 25px;
   --site-header-pad-inline: 28px;
@@ -205,7 +209,7 @@ a.contact-info-value:hover {
   }
 
   .contact-info-label {
-    font-weight: 600;
+    font-weight: var(--site-label-font-weight);
     text-transform: uppercase;
     letter-spacing: 0.06em;
   }
@@ -384,32 +388,48 @@ html:has(#site-mobile-menu:target) .site-header-menu-toggle > span:not(.sr-only)
 }
 
 @font-face {
-  font-family: "UTM Avo";
-  src: url("/fonts/UTMAvo.woff2") format("woff2");
+  font-family: "Gilroy";
+  src: url("/fonts/Gilroy-Regular.woff2") format("woff2");
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: "UTM Avo";
-  src: url("/fonts/UTMAvo-Bold.woff2") format("woff2");
+  font-family: "Gilroy";
+  src: url("/fonts/Gilroy-Medium.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Gilroy";
+  src: url("/fonts/Gilroy-SemiBold.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Gilroy";
+  src: url("/fonts/Gilroy-Bold.woff2") format("woff2");
   font-weight: 700;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: "UTM Avo";
-  src: url("/fonts/UTMAvo-Italic.woff2") format("woff2");
+  font-family: "Gilroy";
+  src: url("/fonts/Gilroy-Italic.woff2") format("woff2");
   font-weight: 400;
   font-style: italic;
   font-display: swap;
 }
 
 @font-face {
-  font-family: "UTM Avo";
-  src: url("/fonts/UTMAvo-BoldItalic.woff2") format("woff2");
+  font-family: "Gilroy";
+  src: url("/fonts/Gilroy-BoldItalic.woff2") format("woff2");
   font-weight: 700;
   font-style: italic;
   font-display: swap;
@@ -767,20 +787,102 @@ html:has([data-full-page-scroll-active]) main {
   }
 }
 
-/* Partners Swiper marquee — linear continuous; scoped (không đụng Swiper khác) */
-[data-partners-scroll] {
-  --swiper-wrapper-transition-timing-function: linear;
+/* Partners marquee — CSS thuần, chạy trên compositor, không cần JS/React.
+   Track = danh sách ×2, trượt 0 → -50% rồi lặp (liền mạch vì 2 nửa giống hệt:
+   mỗi item mang margin-right riêng thay vì gap). 3 logo / khung như Swiper cũ,
+   khoảng cách 24px (mobile) / 64px (≥768px). */
+.partners-marquee {
+  --partners-gap: 24px;
+  overflow: hidden;
+  container-type: inline-size;
+  /* Vuốt dọc vẫn cuộn trang; vuốt ngang để JS kéo dải logo. */
+  touch-action: pan-y;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
-[data-partners-scroll] .swiper-wrapper {
-  transition-timing-function: linear !important;
+.partners-marquee[data-dragging] {
+  cursor: grabbing;
 }
 
-[data-partners-scroll] .swiper-slide {
-  height: auto;
+/* Logo có link: con trỏ tay, không kéo-thả link mặc định. */
+.partners-marquee__link {
+  display: block;
+  width: 100%;
+  cursor: pointer;
+  -webkit-user-drag: none;
+}
+
+.partners-marquee[data-dragging] .partners-marquee__link {
+  cursor: grabbing;
+}
+
+.partners-marquee__link:focus-visible {
+  outline: 2px solid var(--brand-red);
+  outline-offset: 4px;
+}
+
+/* Không có JS: hover chuột vẫn dừng được (JS có thì JS điều khiển). */
+@media (hover: hover) and (pointer: fine) {
+  .partners-marquee:hover .partners-marquee__track {
+    animation-play-state: paused;
+  }
+}
+
+@media (min-width: 768px) {
+  .partners-marquee {
+    --partners-gap: 64px;
+  }
+}
+
+.partners-marquee__track {
   display: flex;
+  width: max-content;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  animation: partners-marquee var(--partners-marquee-duration, 36s) linear
+    infinite;
+  will-change: transform;
+}
+
+.partners-marquee__item {
+  display: flex;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: center;
+  /* Fallback (không có container query): khung = cột nội dung max-w-4xl. */
+  width: calc(
+    (
+        min(100vw, 56rem) - 2 * var(--site-header-pad-inline) - 2 *
+          var(--partners-gap)
+      ) / 3
+  );
+  margin-right: var(--partners-gap);
+}
+
+@supports (width: 1cqw) {
+  .partners-marquee__item {
+    width: calc((100cqw - 2 * var(--partners-gap)) / 3);
+  }
+}
+
+@keyframes partners-marquee {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+/* Reduced motion: không tự chạy (paused ở vị trí đầu) nhưng vẫn kéo tay xem được. */
+@media (prefers-reduced-motion: reduce) {
+  .partners-marquee__track {
+    animation-play-state: paused;
+  }
 }
 
 /* Moving Letters #2 — journey/partners h2; scale 4→1 + fade, play once
@@ -1037,7 +1139,8 @@ html:has([data-full-page-scroll-active]) main {
 }
 
 /* Chưa rest: khóa letter exit — tránh vuốt sớm làm mất logo trước enter */
-[data-brand-break]:not([data-brand-break-logo="rest"]) {
+[data-brand-break]:not([data-brand-break-logo="rest"]),
+[data-brand-break]:not([data-brand-break-logo="rest"]) [data-logo-component] {
   --morph-pin-p-letter: 0 !important;
   --morph-pin-letter-x: 0px !important;
   --morph-pin-letter-x-top: 0px !important;
@@ -1071,10 +1174,12 @@ html:has([data-full-page-scroll-active]) main {
 }
 
 @media (pointer: coarse), (max-width: 767px) {
-  /* Chữ bám đáy ảnh sớm hơn — tránh scale xong còn khoảng trắng rồi mới thấy title */
+  /* Mobile: cùng nhịp thu nhỏ với brand-break (align 1.35 / shrink 1.2).
+     Trước đây 3.2 / 0.85 → title "tới đích" khi ảnh mới thu ~27% quãng, scale
+     bị đóng băng giữa chừng rồi ảnh trôi đi — cảm giác ảnh khựng/dừng lại. */
   [data-about-hero-morph] {
-    --morph-pin-align-speed: 3.2;
-    --morph-pin-shrink-speed: 0.85;
+    --morph-pin-align-speed: 1.35;
+    --morph-pin-shrink-speed: 1.2;
     --morph-pin-title-gap: 50px;
   }
 }
@@ -1107,6 +1212,13 @@ html:has([data-full-page-scroll-active]) main {
   height: var(--morph-pin-vvh, calc(100dvh - var(--site-header-total-height)));
   overflow: clip;
   background: transparent;
+  /* ĐÃ THỬ VÀ REVERT: transform/will-change trực tiếp trên chính phần tử
+     sticky này (để ép compositor layer, giảm giật khi ảnh con scale) — gây
+     mất hẳn "dính" (sticky) trên Safari/WebKit mobile: `transform` khác
+     `none` đặt lên chính phần tử position:sticky là lỗi WebKit đã biết, có
+     thể làm phần tử cuộn trôi bình thường thay vì đứng yên. Không lặp lại
+     cách này ở đây — nếu cần ép layer, phải làm ở 1 wrapper con KHÔNG mang
+     position:sticky, không phải chính phần tử sticky. */
 }
 
 [data-morph-pin-phase="letter"] [data-morph-pin-pin] {
@@ -1139,6 +1251,36 @@ html:has([data-full-page-scroll-active]) main {
 
 [data-morph-pin-image] img {
   object-position: 50% calc(50% * (1 - var(--morph-pin-p-top)));
+}
+
+/* Mobile: scale ảnh chạy bằng scroll-driven animation (compositor lấy mẫu
+   theo vị trí cuộn) thay vì biến CSS do JS ghi mỗi frame. Chỉ bật khi JS đã
+   xác nhận hỗ trợ (data-morph-pin-sda="on"); range/scale do JS tính 1 lần.
+   Timeline = track; inset trên = header → "contain 0" đúng lúc track chạm
+   dưới header (= scrollTop 0 của hook). */
+@keyframes morph-pin-shrink {
+  from {
+    transform: translateZ(0) scale(1);
+  }
+  to {
+    transform: translateZ(0) scale(var(--morph-pin-sda-to-scale, 0.6));
+  }
+}
+
+@supports (animation-timeline: view()) {
+  @media (pointer: coarse), (max-width: 767px) {
+    [data-morph-pin-sda="on"] [data-morph-pin-track] {
+      view-timeline: --morph-pin-track block;
+      view-timeline-inset: var(--site-header-total-height) 0px;
+    }
+
+    [data-morph-pin-sda="on"] [data-morph-pin-image] {
+      animation: morph-pin-shrink linear both;
+      animation-timeline: --morph-pin-track;
+      animation-range: contain var(--morph-pin-sda-start, 0px)
+        contain var(--morph-pin-sda-end, 1px);
+    }
+  }
 }
 
 @media (pointer: coarse), (max-width: 767px) {
@@ -1416,6 +1558,12 @@ html:has(#hero-carousel) body {
   line-height: 1.2;
 }
 
+/* Tên dự án — cùng cỡ/độ đậm với label menu (biến global). */
+#home-projects [data-project-cover] h3 {
+  font-size: var(--site-label-font-size);
+  font-weight: var(--site-label-font-weight);
+}
+
 #home-projects [data-project-cover] p {
   margin-top: 0.15rem;
   font-size: 10px;
@@ -1448,8 +1596,8 @@ html:has(#hero-carousel) body {
     margin-inline: calc(50% - 50vw);
     margin-bottom: var(--home-projects-heading-gap);
     text-align: center;
-    font-size: 0.875rem;
-    font-weight: 400;
+    font-size: var(--site-label-font-size);
+    font-weight: var(--site-label-font-weight);
     line-height: var(--home-projects-heading-h);
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -1457,7 +1605,7 @@ html:has(#hero-carousel) body {
   }
 
   #home-projects [data-project-cover] h3 {
-    font-size: 13px;
+    font-size: var(--site-label-font-size);
   }
 
   #home-projects [data-project-cover] p {
@@ -1550,13 +1698,19 @@ html:has(#hero-carousel) body {
   min-height: 0;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  /* Option menu bám sát header: cách đáy header đúng 32px (không căn giữa). */
+  justify-content: flex-start;
   overflow-y: auto;
   overscroll-behavior: contain;
   padding-inline: 1rem;
-  padding-block: clamp(1.5rem, 8vh, 3rem);
+  padding-top: 32px;
   padding-bottom: max(clamp(1.5rem, 8vh, 3rem), env(safe-area-inset-bottom, 0px));
   box-sizing: border-box;
+}
+
+.site-label-text {
+  font-size: var(--site-label-font-size);
+  font-weight: var(--site-label-font-weight);
 }
 
 /* MenuBar mockup — spacing & typography (mobile overlay only) */
@@ -1566,8 +1720,8 @@ html:has(#hero-carousel) body {
 
 .mobile-menu-links a {
   display: inline-block;
-  font-size: 0.875rem;
-  font-weight: 500;
+  font-size: var(--site-label-font-size);
+  font-weight: var(--site-label-font-weight);
   letter-spacing: 0.25em;
   text-transform: uppercase;
   color: var(--foreground);
@@ -2122,6 +2276,11 @@ ul:has(.project-card-hover-scale) {
   gap: 1rem;
 }
 
+/* Có khối tiêu đề phía trên: khoảng cách = padding-bottom 32px của khối đó. */
+.project-detail-content--default + .project-detail-images-default {
+  margin-top: 0;
+}
+
 .project-detail-images-default__item {
   margin: 0;
   width: 100%;
@@ -2502,11 +2661,21 @@ html[data-lightbox-open] .site-header {
   align-content: center;
   justify-content: center;
   overflow: hidden;
-  font-family: var(--font-mono), ui-monospace, monospace;
-  font-size: clamp(1.5rem, 3.2vw, 2.25rem);
-  font-weight: 400;
+  /* Cùng kiểu chữ label menu: Gilroy, cỡ/độ đậm site-label-text, chữ hoa,
+     khoảng cách chữ như menu (mobile 0.25em, desktop lg+ 0.2em). */
+  font-family: var(--font-ui);
+  font-size: var(--site-label-font-size);
+  font-weight: var(--site-label-font-weight);
   line-height: 1.1;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
   color: var(--brand-red);
+}
+
+@media (min-width: 1024px) {
+  .project-detail-related .text {
+    letter-spacing: 0.2em;
+  }
 }
 
 .project-detail-related .text .char {
@@ -2634,11 +2803,8 @@ html[data-lightbox-open] .site-header {
     white-space: normal;
     border: 0;
     border-radius: 0 0 var(--grid-item-radius) var(--grid-item-radius);
-    background: linear-gradient(
-      to top,
-      rgb(35 31 32 / 0.78) 0%,
-      rgb(35 31 32 / 0) 100%
-    );
+    /* Không nền mờ — chữ màu brand đỏ thẳng trên ảnh. */
+    background: none;
     font-family: var(--font-ui);
     font-size: clamp(0.65rem, 0.9vw, 0.8rem);
     font-weight: 500;
@@ -2646,7 +2812,7 @@ html[data-lightbox-open] .site-header {
     letter-spacing: 0.06em;
     text-align: center;
     text-transform: uppercase;
-    color: var(--brand-white);
+    color: #7a1f27;
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.2s ease;
@@ -2693,7 +2859,7 @@ html[data-lightbox-open] .site-header {
 [data-site-loading] {
   --sl-bg: var(--brand-white);
   --sl-block: var(--brand-red);
-  --sl-logo-w: 10vw;
+  --sl-logo-w: 8vw;
   --sl-logo-h: calc(var(--sl-logo-w) * var(--sl-sum-h) / var(--sl-sum-w));
   --sl-logo-left: calc(50% - var(--sl-logo-w) / 2);
   --sl-logo-top: calc(50% - var(--sl-logo-h) / 2);
@@ -2704,6 +2870,8 @@ html[data-lightbox-open] .site-header {
   --sl-loop-ms: 1.7s;
   --sl-dismiss-ms: 0.5s;
   --sl-autodismiss-ms: var(--sl-dismiss-ms);
+  /* Intro (mở web lần đầu): đúng 1 vòng animation — đủ 3 khối vào, giữ, ra. */
+  --sl-intro-ms: var(--sl-loop-ms);
   --sl-ease: cubic-bezier(0.22, 1, 0.36, 1);
   position: fixed;
   top: 0;
@@ -2717,6 +2885,14 @@ html[data-lightbox-open] .site-header {
 }
 
 [data-site-loading],
+/* Desktop: logo loading nhỏ còn 50% (10vw → 5vw). Mọi khối tính theo
+   --sl-logo-w nên vị trí/tỉ lệ/animation giữ nguyên. */
+@media (min-width: 1024px) {
+  [data-site-loading] {
+    --sl-logo-w: 5vw;
+  }
+}
+
 [data-site-loading] * {
   pointer-events: none;
 }
@@ -2725,6 +2901,19 @@ html[data-lightbox-open] .site-header {
 [data-site-loading-autodismiss] {
   animation: site-loading-autodismiss 1ms linear forwards;
   animation-delay: var(--sl-autodismiss-ms);
+}
+
+/* Intro: ẩn đúng lúc hết 1 vòng. Cùng đồng hồ với animation các khối (cùng
+   bắt đầu khi phần tử được vẽ lần đầu) → máy chậm vẫn thấy trọn vòng, không
+   bị tắt trước khi kịp hiện như khi đếm 0.5s. JS unmount theo animation này. */
+[data-site-loading-intro][data-site-loading-autodismiss] {
+  animation-delay: var(--sl-intro-ms);
+}
+
+/* Đã xem intro trong phiên (script đầu trang gắn cờ trước khi vẽ) → không
+   hiện lại, tránh chớp overlay ở các lần tải sau trước khi React gỡ ra. */
+html[data-intro-done] [data-site-loading-intro] {
+  display: none;
 }
 
 @keyframes site-loading-autodismiss {
@@ -2843,7 +3032,8 @@ html[data-lightbox-open] .site-header {
     will-change: auto;
   }
 
-  [data-site-loading-autodismiss] {
+  [data-site-loading-autodismiss],
+  [data-site-loading-intro][data-site-loading-autodismiss] {
     animation-delay: 0s;
   }
 }

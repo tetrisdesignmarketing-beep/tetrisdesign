@@ -21,10 +21,9 @@ function isChunkError(reason: unknown): boolean {
 
 export function ChunkErrorRecovery() {
   useEffect(() => {
-    if (process.env.NODE_ENV !== "production") {
-      /* Cờ cho script chẩn đoán dev: effect chạy = React đã hydrate */
-      (window as unknown as { __siteHydrated?: boolean }).__siteHydrated = true;
-    }
+    /* Effect chạy = React đã hydrate. Bật cả production: public/morph-pin.js
+       và public/fps-pager.js đọc cờ này để biết không cần chạy fallback. */
+    (window as unknown as { __siteHydrated?: boolean }).__siteHydrated = true;
 
     const reloadOnce = () => {
       try {

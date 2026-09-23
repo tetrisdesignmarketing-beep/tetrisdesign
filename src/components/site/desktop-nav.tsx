@@ -8,7 +8,6 @@ export function DesktopNav({ inverted }: DesktopNavProps) {
   return (
     <SiteNavLinks
       className="hidden lg:block"
-      linkClassName="text-xs lg:text-sm"
       inverted={inverted}
     />
   );

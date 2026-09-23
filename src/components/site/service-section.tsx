@@ -136,7 +136,7 @@ export function ServiceSection({
         <div data-service-copy="">
           <h2
             data-service-title=""
-            className="text-[18px] font-normal uppercase"
+            className="site-label-text uppercase"
           >
             {title}
           </h2>

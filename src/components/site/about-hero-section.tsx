@@ -26,6 +26,7 @@ export function AboutHeroSection({
       ref={rootRef}
       data-morph-pin=""
       data-about-hero-morph=""
+      suppressHydrationWarning
       className={cn("relative w-full bg-background", className)}
     >
       <div data-morph-pin-track="">

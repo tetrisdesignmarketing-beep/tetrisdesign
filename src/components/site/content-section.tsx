@@ -50,7 +50,7 @@ export function ContentSection({
         data-section-title=""
         data-ml7-heading={movingLetters ? "" : undefined}
         data-ml2-heading={headingEffect === "ml2" ? "" : undefined}
-        className="text-sm uppercase"
+        className="site-label-text uppercase"
       >
         {scrollBlur ? <span data-scroll-blur="">{titleNode}</span> : titleNode}
       </h2>

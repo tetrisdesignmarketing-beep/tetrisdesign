@@ -17,13 +17,14 @@ import {
   FieldError,
   SitePageFormFooter,
 } from "@/components/admin/site-page-form-ui";
+import { normalizePartnerHref } from "@/lib/partner-href";
 import { putSitePage } from "@/lib/put-site-page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  aboutPageSchema,
+  aboutPageFormSchema,
   type AboutPageContent,
 } from "@/lib/validations/site-page";
 
@@ -201,6 +202,32 @@ function PartnerFields({
               message={errors.partners?.items?.[index]?.name?.message}
             />
           </div>
+          <div className="space-y-2">
+            <Label>Link (tuỳ chọn)</Label>
+            <Input
+              type="text"
+              inputMode="url"
+              placeholder="https://… hoặc amway.com"
+              {...register(`partners.items.${index}.href`, {
+                /* Gõ thiếu https:// → tự thêm khi rời ô */
+                onBlur: (event) => {
+                  const normalized = normalizePartnerHref(event.target.value);
+                  if (normalized) {
+                    setValue(`partners.items.${index}.href`, normalized, {
+                      shouldValidate: true,
+                    });
+                  }
+                },
+              })}
+            />
+            <p className="text-xs text-muted-foreground">
+              Bấm logo trên trang sẽ mở link ở tab mới. Để trống: logo không bấm
+              được.
+            </p>
+            <FieldError
+              message={errors.partners?.items?.[index]?.href?.message}
+            />
+          </div>
           <CoverImagePicker
             label="Logo"
             description="Chọn logo từ Media"
@@ -219,7 +246,7 @@ function PartnerFields({
       <Button
         type="button"
         variant="outline"
-        onClick={() => append({ name: "", logo: "" })}
+        onClick={() => append({ name: "", logo: "", href: "" })}
       >
         <Plus className="h-4 w-4" />
         Thêm đối tác
@@ -245,15 +272,18 @@ export function AboutPageForm({
     setValue,
     formState: { errors },
   } = useForm<AboutPageContent>({
-    resolver: zodResolver(aboutPageSchema),
+    resolver: zodResolver(aboutPageFormSchema),
     defaultValues: initialData,
   });
 
-  const { fields: groups, append: appendGroup, remove: removeGroup } =
-    useFieldArray({
-      control,
-      name: "awards.groups",
-    });
+  const {
+    fields: groups,
+    append: appendGroup,
+    remove: removeGroup,
+  } = useFieldArray({
+    control,
+    name: "awards.groups",
+  });
 
   const onSubmit = async (data: AboutPageContent) => {
     setIsSubmitting(true);
@@ -275,9 +305,7 @@ export function AboutPageForm({
         label="Ảnh hero"
         description="Ảnh full viewport đầu trang About"
         value={watch("heroImage")}
-        onChange={(url) =>
-          setValue("heroImage", url, { shouldValidate: true })
-        }
+        onChange={(url) => setValue("heroImage", url, { shouldValidate: true })}
       />
       <FieldError message={errors.heroImage?.message} />
 

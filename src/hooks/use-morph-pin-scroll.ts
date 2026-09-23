@@ -11,24 +11,7 @@ function isCoarsePointer(): boolean {
   );
 }
 
-function readCssNumber(
-  root: HTMLElement,
-  name: string,
-  fallback: number,
-): number {
-  const raw = getComputedStyle(root).getPropertyValue(name);
-  const value = Number.parseFloat(raw);
-  return Number.isFinite(value) ? value : fallback;
-}
-
-function readPositiveRatio(
-  root: HTMLElement,
-  name: string,
-  fallback: number,
-): number {
-  const value = readCssNumber(root, name, fallback);
-  return value > 0 ? value : fallback;
-}
+type TokenReader = (name: string, fallback: number) => number;
 
 function setCssVar(el: HTMLElement, name: string, value: string) {
   if (el.style.getPropertyValue(name) === value) return;
@@ -47,12 +30,12 @@ function clamp(value: number, min: number, max: number): number {
  * Brand-break: letter-ratio theo chiều cao scroller (target px → ratio clamp).
  * Hero (letter-ratio CSS = 0) không gọi.
  */
-function resolveBrandBreakLetterRatio(root: HTMLElement, vvh: number): number {
-  const fallback = readCssNumber(root, "--morph-pin-letter-ratio", 0.24);
+function resolveBrandBreakLetterRatio(num: TokenReader, vvh: number): number {
+  const fallback = num("--morph-pin-letter-ratio", 0.24);
   if (vvh < 1) return fallback;
-  const targetPx = readCssNumber(root, "--brand-break-letter-px", 200);
-  const minR = readCssNumber(root, "--brand-break-letter-ratio-min", 0.16);
-  const maxR = readCssNumber(root, "--brand-break-letter-ratio-max", 0.28);
+  const targetPx = num("--brand-break-letter-px", 200);
+  const minR = num("--brand-break-letter-ratio-min", 0.16);
+  const maxR = num("--brand-break-letter-ratio-max", 0.28);
   return clamp(targetPx / vvh, minR, maxR);
 }
 
@@ -137,6 +120,52 @@ function measureContentShiftPx(
   return measureVisualImageBottom(image) + titleGapPx - naturalTop;
 }
 
+/**
+ * Hình học cố định để tính content-shift liên tục (không đo DOM mỗi frame).
+ * Scale ảnh neo `transform-origin: top center` nên mép trên ảnh không đổi khi
+ * scale; đáy photo = mép trên + scale × khoảng cách chưa scale.
+ */
+interface ShiftGeometry {
+  /** Mép trên khung ảnh − mép trên khung pin (không phụ thuộc scale). */
+  imageTopInPin: number;
+  /** Đáy photo (object-contain) − mép trên khung ảnh, ở scale 1. */
+  photoBottomUnscaled: number;
+  /** Top tự nhiên (chưa shift) của title − đáy track. */
+  titleFromTrackBottom: number;
+}
+
+function measureShiftGeometry(
+  root: HTMLElement,
+  track: HTMLElement,
+  appliedShiftPx: number,
+): ShiftGeometry | null {
+  const pin = root.querySelector("[data-morph-pin-pin]");
+  const image = root.querySelector("[data-morph-pin-image]");
+  const title = root.querySelector(
+    "[data-morph-pin-content] [data-section-title]",
+  );
+  if (
+    !(pin instanceof HTMLElement) ||
+    !(image instanceof HTMLElement) ||
+    !(title instanceof HTMLElement)
+  ) {
+    return null;
+  }
+  const imageRect = image.getBoundingClientRect();
+  const scale =
+    image.offsetHeight > 0 ? imageRect.height / image.offsetHeight : 1;
+  if (!(scale > 0)) return null;
+  return {
+    imageTopInPin: imageRect.top - pin.getBoundingClientRect().top,
+    photoBottomUnscaled:
+      (measureVisualImageBottom(image) - imageRect.top) / scale,
+    titleFromTrackBottom:
+      title.getBoundingClientRect().top -
+      appliedShiftPx -
+      track.getBoundingClientRect().bottom,
+  };
+}
+
 /** localScrollTop dùng chung cho các hook khác (vd. brand-break logo snap-home):
  * vị trí cuộn cục bộ so với track — 0 nghĩa là chưa chạm điểm sticky, tăng dần
  * khi đang pin. `null` khi root chưa mount hoặc không tìm thấy track. */
@@ -181,22 +210,106 @@ export function useMorphPinScroll(sectionId: string) {
     if (!(track instanceof HTMLElement)) return;
     root.dataset.morphPinBound = "react";
 
+    /* Biến tiến trình đổi MỖI frame → ghi thẳng lên phần tử dùng nó (ảnh,
+       khối text, logo) thay vì div gốc. Biến CSS kế thừa: ghi trên gốc buộc
+       trình duyệt tính lại style cho CẢ cây con (carousel partner, footer…)
+       mỗi frame; ghi trên phần tử lá chỉ tính lại vài node. */
+    const imageEls = Array.from(
+      root.querySelectorAll<HTMLElement>("[data-morph-pin-image]"),
+    );
+    const contentEls = Array.from(
+      root.querySelectorAll<HTMLElement>("[data-morph-pin-content]"),
+    );
+    const logoEl = root.querySelector<HTMLElement>("[data-logo-component]");
+
     let frame = 0;
     let touchEndFrame = 0;
     /* Đang chạm: không remeasure vvh — iOS sẽ hủy momentum và ảnh giật thay vì scale. */
     let touching = false;
 
+    /* Cache token CSS + chiều cao viewport ổn định — chỉ đọc lại khi resize /
+       xoay màn hình, KHÔNG đọc mỗi frame cuộn. Trước đây mỗi frame gọi ~15 lần
+       getComputedStyle(root) và (máy cảm ứng) còn chèn/xoá 1 probe DOM để đo
+       100svh → ép tính lại style + layout toàn trang ở MỌI frame, chỉ xảy ra
+       trên điện thoại (desktop đi nhánh visualViewport) — nguồn giật chính. */
+    const tokenCache = new Map<string, number>();
+    const token: TokenReader = (name, fallback) => {
+      let raw = tokenCache.get(name);
+      if (raw === undefined) {
+        raw = Number.parseFloat(getComputedStyle(root).getPropertyValue(name));
+        tokenCache.set(name, raw);
+      }
+      return Number.isFinite(raw) ? raw : fallback;
+    };
+    const positiveToken: TokenReader = (name, fallback) => {
+      const value = token(name, fallback);
+      return value > 0 ? value : fallback;
+    };
+    let coarse = isCoarsePointer();
+    let stableViewportHeight = coarse ? getStableViewportHeight() : 0;
+    let headerHeight = getHeaderOffset();
+    /* Mobile: hình học đo 1 lần → content-shift tính liên tục mỗi frame. */
+    let geometry: ShiftGeometry | null = null;
+    /* Mobile + trình duyệt hỗ trợ scroll-driven animation (Chrome 115+,
+       Safari 26+): scale ảnh chạy bằng CSS animation gắn timeline cuộn — trình
+       duyệt tự lấy mẫu theo vị trí cuộn của CHÍNH frame đang vẽ, không qua
+       vòng JS rAF → style → transform (trễ 1 frame so với cuộn async của iOS,
+       ảnh "rung" nhẹ, và WebKit phải rasterize lại ảnh mỗi lần JS đổi scale).
+       JS chỉ ghi tham số range/scale (đổi khi resize). Không hỗ trợ → giữ
+       đường JS cũ. Bật qua data-morph-pin-sda="on" trên gốc (CSS dựa vào đó). */
+    const sdaSupported =
+      typeof CSS !== "undefined" &&
+      typeof CSS.supports === "function" &&
+      CSS.supports("animation-timeline: view()");
+    let sdaActive = false;
+    let sdaVerified = false;
+    const applySdaMode = () => {
+      const next = sdaSupported && coarse;
+      sdaActive = next;
+      sdaVerified = false;
+      if (next) root.dataset.morphPinSda = "on";
+      else delete root.dataset.morphPinSda;
+    };
+    applySdaMode();
+
+    const remeasureViewport = () => {
+      tokenCache.clear();
+      coarse = isCoarsePointer();
+      stableViewportHeight = coarse ? getStableViewportHeight() : 0;
+      headerHeight = getHeaderOffset();
+      geometry = null;
+      if (sdaActive !== (sdaSupported && coarse)) applySdaMode();
+    };
+
+    /* Timeline không active (vd. có phần tử cha thành scroll container) →
+       animation không áp dụng, ảnh sẽ đứng yên. Kiểm tra 1 lần; hỏng thì tắt
+       và quay về đường JS. */
+    const verifySda = () => {
+      sdaVerified = true;
+      const image = imageEls[0];
+      if (!image || typeof image.getAnimations !== "function") return;
+      const anim = image
+        .getAnimations()
+        .find(
+          (a) =>
+            "animationName" in a &&
+            (a as CSSAnimation).animationName === "morph-pin-shrink",
+        );
+      if (!anim || !anim.timeline || anim.currentTime === null) {
+        sdaActive = false;
+        delete root.dataset.morphPinSda;
+        sync();
+      }
+    };
+
     const sync = () => {
-      const vvhSlack = Math.max(
-        1,
-        readCssNumber(root, "--morph-pin-vvh-slack", 48),
-      );
-      const headerOffset = getHeaderOffset();
+      const vvhSlack = Math.max(1, token("--morph-pin-vvh-slack", 48));
+      const headerOffset = headerHeight;
       /* Touch: dùng viewport ổn định (không co theo visualViewport) — khớp
          `useViewportBelowHeader`, tránh thanh URL iOS đổi giữa lúc cuộn làm
          vvh đo lại liên tục và ảnh giật. */
-      const rawViewportHeight = isCoarsePointer()
-        ? getStableViewportHeight()
+      const rawViewportHeight = coarse
+        ? stableViewportHeight
         : (window.visualViewport?.height ?? window.innerHeight);
       let vvh = Math.max(0, rawViewportHeight - headerOffset);
       if (vvh <= 0) return;
@@ -207,35 +320,20 @@ export function useMorphPinScroll(sectionId: string) {
       }
 
       const isBrandBreak = root.hasAttribute("data-brand-break");
-      const cssLetterRatio = Math.max(
-        0,
-        readCssNumber(root, "--morph-pin-letter-ratio", 0),
-      );
+      const cssLetterRatio = Math.max(0, token("--morph-pin-letter-ratio", 0));
       const letterRatio =
         cssLetterRatio > 0 && isBrandBreak
-          ? resolveBrandBreakLetterRatio(root, vvh)
+          ? resolveBrandBreakLetterRatio(token, vvh)
           : cssLetterRatio;
-      const imageRatio = readPositiveRatio(
-        root,
-        "--morph-pin-image-ratio",
-        1,
-      );
-      const shrinkSpeed = readPositiveRatio(
-        root,
-        "--morph-pin-shrink-speed",
-        1.2,
-      );
-      const topSpeed = readPositiveRatio(root, "--morph-pin-top-speed", 0.8);
-      const alignSpeed = readPositiveRatio(
-        root,
-        "--morph-pin-align-speed",
-        1.2,
-      );
-      const titleGapPx = readCssNumber(root, "--morph-pin-title-gap", 0);
+      const imageRatio = positiveToken("--morph-pin-image-ratio", 1);
+      const shrinkSpeed = positiveToken("--morph-pin-shrink-speed", 1.2);
+      const topSpeed = positiveToken("--morph-pin-top-speed", 0.8);
+      const alignSpeed = positiveToken("--morph-pin-align-speed", 1.2);
+      const titleGapPx = token("--morph-pin-title-gap", 0);
       /* Enter (logo phải → đích): chỉ brand-break có; hero luôn 0 (không có
          LogoComponent). Cộng vào alignUnstick để track có đủ chỗ cuộn. */
       const enterRatio = isBrandBreak
-        ? readPositiveRatio(root, "--brand-break-enter-ratio", 0.14)
+        ? positiveToken("--brand-break-enter-ratio", 0.14)
         : 0;
       const enterDist = vvh * enterRatio;
       const letterDist = vvh * letterRatio;
@@ -255,6 +353,7 @@ export function useMorphPinScroll(sectionId: string) {
         frozenShiftRef.current = null;
         targetShiftRef.current = null;
         lastMeasureProgressRef.current = { pShrink: -1, pAlign: -1 };
+        geometry = null;
       }
       lastVvhRef.current = vvh;
       if (letterRatio > 0) {
@@ -264,8 +363,14 @@ export function useMorphPinScroll(sectionId: string) {
       /* Local scroll progress: 0 trước khi track chạm điểm sticky (track top ==
          headerOffset), tăng 1:1 khi đang pin. Không cần chặn trần — mọi công
          thức phía dưới đều tự clamp01. */
-      const trackTop = track.getBoundingClientRect().top;
+      const trackRect = track.getBoundingClientRect();
+      const trackTop = trackRect.top;
       const scrollTop = Math.max(0, headerOffset - trackTop);
+      /* Đo hình học TRƯỚC mọi thao tác ghi style trong frame này (tránh ép
+         tính lại style giữa frame). Chỉ xảy ra lần đầu / sau resize / load ảnh. */
+      if (coarse && geometry === null) {
+        geometry = measureShiftGeometry(root, track, shiftRef.current);
+      }
       /* Enter chạy TRƯỚC letter/exit trên cùng trục scrollTop — 2 pha tách
          biệt tự nhiên theo vị trí cuộn, không chồng lấn nên không cần "armed"
          nữa (trước đây cần khoá vì enter chạy timer riêng, có thể chưa xong
@@ -317,7 +422,16 @@ export function useMorphPinScroll(sectionId: string) {
       else if (shrinkDone) phase = "pin";
       else if (lettersOut) phase = "image";
 
-      root.dataset.morphPinPhase = phase;
+      /* Guard — tránh ghi lại DOM attribute mỗi frame khi phase không đổi.
+         Ghi dataset (setAttribute) luôn buộc trình duyệt tính lại style cho
+         mọi CSS selector kiểu [data-morph-pin-phase="..."] dù giá trị y hệt
+         cũ, không có no-op tự động như setCssVar. "phase" giữ nguyên suốt
+         nhiều chục frame liên tiếp trong lúc pShrink/pTop vẫn đang chạy (ví
+         dụ cả đoạn "image"→"pin") — ghi thừa mỗi frame ở đây là chi phí
+         chính gây giật trên mobile yếu, đúng lúc ảnh đang thu nhỏ. */
+      if (root.dataset.morphPinPhase !== phase) {
+        root.dataset.morphPinPhase = phase;
+      }
 
       /* Dọn margin-top từ bản flow/relative cũ (tránh ảnh kẹt đáy sau hot reload). */
       const pin = root.querySelector("[data-morph-pin-pin]");
@@ -331,35 +445,54 @@ export function useMorphPinScroll(sectionId: string) {
          Với vw < 768px (mobile): không set gì — giữ nguyên default CSS 0.6, đảm bảo
          không thay đổi hành vi trên điện thoại. Đọc window.innerWidth — rẻ, không
          forced layout (không dùng getBoundingClientRect). */
+      let imageEndScale: number | null = null;
       if (root.hasAttribute("data-about-hero-morph")) {
         const heroVw = window.visualViewport?.width ?? window.innerWidth;
         if (heroVw >= 768) {
-          const endScale = Math.min(0.6, 640.8 / heroVw);
-          setCssVar(root, "--morph-pin-image-end-scale", String(endScale));
+          imageEndScale = Math.min(0.6, 640.8 / heroVw);
+          setCssVar(root, "--morph-pin-image-end-scale", String(imageEndScale));
         } else if (root.style.getPropertyValue("--morph-pin-image-end-scale")) {
           root.style.removeProperty("--morph-pin-image-end-scale");
         }
       }
 
       setCssVar(root, "--morph-pin-vvh", `${vvh}px`);
-      setCssVar(root, "--morph-pin-p-letter", String(pLetter));
-      setCssVar(root, "--morph-pin-p-image", String(pImage));
-      setCssVar(root, "--morph-pin-p-shrink", String(pShrink));
-      setCssVar(root, "--morph-pin-p-top", String(pTop));
-      /* iOS: px thẳng; soft-stagger exit khi có letter phase (brand-break) */
-      if (letterRatio > 0) {
-        const vw = window.visualViewport?.width ?? window.innerWidth;
-        const exitStagger = readCssNumber(
-          root,
-          "--brand-break-exit-stagger",
-          0.1,
-        );
-        const exitFinish = readCssNumber(
-          root,
-          "--brand-break-exit-finish",
+      const endScaleNow =
+        imageEndScale ?? token("--morph-pin-image-end-scale", 0.6);
+      if (sdaActive) {
+        /* Cùng công thức với JS: shrink bắt đầu sau enter + letter, dừng khi
+           pShrink = 1 hoặc bị đóng băng lúc title tới đích (pAlign = 1). */
+        const startPx = enterDist + letterDist;
+        const maxSpeed = Math.max(shrinkSpeed, alignSpeed);
+        const endPx = startPx + imageDist * Math.min(1, 1 / maxSpeed);
+        const shrinkAtEnd = Math.min(
           1,
+          shrinkSpeed * Math.min(1, 1 / maxSpeed),
         );
-        setCssVar(root, "--morph-pin-letter-x", letterExitPx(pLetter, vw));
+        const toScale = 1 - shrinkAtEnd * (1 - endScaleNow);
+        for (const el of imageEls) {
+          setCssVar(el, "--morph-pin-sda-start", `${startPx}px`);
+          setCssVar(
+            el,
+            "--morph-pin-sda-end",
+            `${Math.max(startPx + 1, endPx)}px`,
+          );
+          setCssVar(el, "--morph-pin-sda-to-scale", String(toScale));
+        }
+        if (!sdaVerified) requestAnimationFrame(verifySda);
+      } else {
+        for (const el of imageEls) {
+          setCssVar(el, "--morph-pin-p-image", String(pImage));
+          setCssVar(el, "--morph-pin-p-shrink", String(pShrink));
+          setCssVar(el, "--morph-pin-p-top", String(pTop));
+        }
+      }
+      /* iOS: px thẳng; soft-stagger exit khi có letter phase (brand-break) */
+      if (letterRatio > 0 && logoEl) {
+        const vw = window.visualViewport?.width ?? window.innerWidth;
+        const exitStagger = token("--brand-break-exit-stagger", 0.1);
+        const exitFinish = token("--brand-break-exit-finish", 1);
+        setCssVar(logoEl, "--morph-pin-letter-x", letterExitPx(pLetter, vw));
         for (const [i, id] of (["top", "mid", "bot"] as const).entries()) {
           const p = staggerLetterExitProgress(
             pLetter,
@@ -367,27 +500,19 @@ export function useMorphPinScroll(sectionId: string) {
             exitStagger,
             exitFinish,
           );
-          setCssVar(root, `--morph-pin-letter-x-${id}`, letterExitPx(p, vw));
+          setCssVar(logoEl, `--morph-pin-letter-x-${id}`, letterExitPx(p, vw));
         }
-      } else {
-        setCssVar(root, "--morph-pin-letter-x", "0px");
+      } else if (logoEl) {
+        setCssVar(logoEl, "--morph-pin-letter-x", "0px");
       }
 
       /* Enter (logo phải → đích) — cùng kiểu so le với exit (top dẫn đầu,
          bot theo sau), đối xứng 2 chiều tự nhiên theo scrollTop, không cần
          timer/state machine riêng nữa. */
-      if (isBrandBreak) {
+      if (isBrandBreak && logoEl) {
         const vw = window.visualViewport?.width ?? window.innerWidth;
-        const enterStagger = readCssNumber(
-          root,
-          "--brand-break-enter-stagger",
-          0.12,
-        );
-        const enterFinish = readCssNumber(
-          root,
-          "--brand-break-enter-finish",
-          1,
-        );
+        const enterStagger = token("--brand-break-enter-stagger", 0.12);
+        const enterFinish = token("--brand-break-enter-finish", 1);
         for (const [i, id] of (["top", "mid", "bot"] as const).entries()) {
           const p = staggerLetterExitProgress(
             pEnter,
@@ -395,7 +520,7 @@ export function useMorphPinScroll(sectionId: string) {
             enterStagger,
             enterFinish,
           );
-          setCssVar(root, `--morph-pin-enter-x-${id}`, enterOffsetPx(p, vw));
+          setCssVar(logoEl, `--morph-pin-enter-x-${id}`, enterOffsetPx(p, vw));
         }
         const nextLogo = pEnter >= 1 ? "rest" : "waiting";
         if (root.dataset.brandBreakLogo !== nextLogo) {
@@ -404,7 +529,33 @@ export function useMorphPinScroll(sectionId: string) {
       }
 
       let contentShift = 0;
-      if (lettersOut) {
+      if (lettersOut && coarse && geometry !== null) {
+        /* Mobile: tính liên tục từ hình học cố định — không đo DOM, không bậc
+           thang, không đóng băng khi đang chạm (trước đây text đứng yên lúc
+           kéo rồi nhảy khi nhấc tay). */
+        const endScale = endScaleNow;
+        const scale = 1 - pShrink * (1 - endScale);
+        /* Khung pin sticky: mép trên = max(track.top, header), chặn bởi đáy track. */
+        const pinTop = Math.min(
+          Math.max(trackRect.top, headerOffset),
+          trackRect.bottom - vvh,
+        );
+        const targetShift =
+          pinTop +
+          geometry.imageTopInPin +
+          scale * geometry.photoBottomUnscaled +
+          titleGapPx -
+          (trackRect.bottom + geometry.titleFromTrackBottom);
+        targetShiftRef.current = targetShift;
+        if (titleArrived) {
+          if (frozenShiftRef.current === null) {
+            frozenShiftRef.current = targetShift;
+          }
+          contentShift = frozenShiftRef.current;
+        } else {
+          contentShift = pAlign * targetShift;
+        }
+      } else if (lettersOut) {
         /* Đang chạm: giữ shift hiện tại — không đo (rect nhiễu). */
         if (touching) {
           contentShift = shiftRef.current;
@@ -426,9 +577,11 @@ export function useMorphPinScroll(sectionId: string) {
            * Pin (shrinkDone): geometry ổn → đo một lần rồi tái dùng.
            */
           const last = lastMeasureProgressRef.current;
+          /* Desktop (mobile đi nhánh tính liên tục ở trên). */
+          const progressMoveThreshold = 0.02;
           const progressMoved =
-            Math.abs(pShrink - last.pShrink) > 0.02 ||
-            Math.abs(pAlign - last.pAlign) > 0.02;
+            Math.abs(pShrink - last.pShrink) > progressMoveThreshold ||
+            Math.abs(pAlign - last.pAlign) > progressMoveThreshold;
           const needMeasure =
             targetShiftRef.current === null ||
             (!shrinkDone && progressMoved) ||
@@ -456,7 +609,9 @@ export function useMorphPinScroll(sectionId: string) {
       shiftRef.current = contentShift;
 
       setCssVar(root, "--morph-pin-collapse", `${alignUnstick}px`);
-      setCssVar(root, "--morph-pin-content-shift", `${contentShift}px`);
+      for (const el of contentEls) {
+        setCssVar(el, "--morph-pin-content-shift", `${contentShift}px`);
+      }
     };
 
     const onScroll = () => {
@@ -481,8 +636,16 @@ export function useMorphPinScroll(sectionId: string) {
       });
     };
 
+    const onResize = () => {
+      remeasureViewport();
+      sync();
+    };
+
     const img = root.querySelector("[data-morph-pin-image] img");
-    const onImageLoad = () => sync();
+    const onImageLoad = () => {
+      geometry = null;
+      sync();
+    };
 
     sync();
     if (!enabled) {
@@ -493,10 +656,14 @@ export function useMorphPinScroll(sectionId: string) {
     document.addEventListener("touchstart", onTouchStart, { passive: true });
     document.addEventListener("touchend", onTouchEnd, { passive: true });
     document.addEventListener("touchcancel", onTouchEnd, { passive: true });
-    window.addEventListener("resize", sync);
-    window.visualViewport?.addEventListener("resize", sync);
+    window.addEventListener("resize", onResize);
+    window.addEventListener("orientationchange", onResize);
+    window.visualViewport?.addEventListener("resize", onResize);
     img?.addEventListener("load", onImageLoad);
-    const observer = new ResizeObserver(sync);
+    const observer = new ResizeObserver(() => {
+      geometry = null;
+      sync();
+    });
     observer.observe(root);
 
     return () => {
@@ -504,10 +671,12 @@ export function useMorphPinScroll(sectionId: string) {
       document.removeEventListener("touchstart", onTouchStart);
       document.removeEventListener("touchend", onTouchEnd);
       document.removeEventListener("touchcancel", onTouchEnd);
-      window.removeEventListener("resize", sync);
-      window.visualViewport?.removeEventListener("resize", sync);
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("orientationchange", onResize);
+      window.visualViewport?.removeEventListener("resize", onResize);
       img?.removeEventListener("load", onImageLoad);
       observer.disconnect();
+      delete root.dataset.morphPinSda;
       if (frame) cancelAnimationFrame(frame);
       if (touchEndFrame) cancelAnimationFrame(touchEndFrame);
     };

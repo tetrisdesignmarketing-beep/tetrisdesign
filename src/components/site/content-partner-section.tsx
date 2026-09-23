@@ -12,7 +12,7 @@ interface ContentPartnerSectionProps {
   journeyTitle: string;
   journeyParagraphs: readonly string[];
   partnersTitle: string;
-  partners: readonly { name: string; logo: string }[];
+  partners: readonly { name: string; logo: string; href?: string }[];
   className?: string;
   /** Pager section id — ml2 play khi heading vào view */
   lettersSectionId?: string;
@@ -121,6 +121,7 @@ export function ContentPartnerSection({
       data-content-partner=""
       data-morph-pin-content=""
       data-content-partner-animate={visible ? "in" : "out"}
+      suppressHydrationWarning
       className={cn("relative w-full bg-background", className)}
     >
       <div className="mx-auto flex w-full max-w-4xl flex-col justify-start px-[var(--site-header-pad-inline)] pt-6 pb-0 md:pt-8 md:pb-0">

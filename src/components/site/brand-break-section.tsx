@@ -16,7 +16,7 @@ interface BrandBreakSectionProps {
   journeyTitle: string;
   journeyParagraphs: readonly string[];
   partnersTitle: string;
-  partners: readonly { name: string; logo: string }[];
+  partners: readonly { name: string; logo: string; href?: string }[];
   className?: string;
   contact?: ContactPageContent;
 }
@@ -41,6 +41,7 @@ export function BrandBreakSection({
       data-brand-break=""
       data-brand-break-animate={logoPhase === "waiting" ? "out" : "in"}
       data-brand-break-logo={logoPhase}
+      suppressHydrationWarning
       className={cn("relative w-full bg-background", className)}
     >
       <div data-morph-pin-track="">

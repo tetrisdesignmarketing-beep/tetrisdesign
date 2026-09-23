@@ -9,6 +9,8 @@ interface SiteLoadingScreenProps {
   rootRef?: Ref<HTMLDivElement>;
   /** Tự ẩn sau `--sl-dismiss-ms` — intro/overlay timer mode */
   autoDismiss?: boolean;
+  /** Intro mở web: tự ẩn sau `--sl-intro-ms` (1 vòng animation). */
+  intro?: boolean;
 }
 
 const loadingVars = {
@@ -28,12 +30,14 @@ const loadingVars = {
 export function SiteLoadingScreen({
   rootRef,
   autoDismiss = false,
+  intro = false,
 }: SiteLoadingScreenProps) {
   return (
     <div
       ref={rootRef}
       data-site-loading
       data-site-loading-autodismiss={autoDismiss ? "" : undefined}
+      data-site-loading-intro={intro ? "" : undefined}
       role="status"
       aria-live="polite"
       aria-label="Đang tải"

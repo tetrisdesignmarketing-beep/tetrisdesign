@@ -130,6 +130,7 @@ export function MovingLettersPop({
       ref={setRef}
       data-ml2=""
       data-ml2-play={play ? "" : undefined}
+      suppressHydrationWarning
       className={cn("ml2", className)}
     >
       {chars.map((char, index) => {
@@ -167,6 +168,7 @@ export function MovingLetters({ text, className }: MovingLettersProps) {
       ref={setRef}
       data-ml7=""
       data-ml7-play={play ? "" : undefined}
+      suppressHydrationWarning
       className={cn("ml7", className)}
     >
       <span className="ml7-text-wrapper">
@@ -214,6 +216,7 @@ export function MovingLettersScale({ text, className }: MovingLettersProps) {
       ref={setRef}
       data-ml9=""
       data-ml9-play={play ? "" : undefined}
+      suppressHydrationWarning
       className={cn("ml9", className)}
     >
       <span className="ml9-text-wrapper">
@@ -302,6 +305,7 @@ export function MovingLettersLine({ text, className }: MovingLettersProps) {
       ref={setRef}
       data-ml11=""
       data-ml11-play={play ? "" : undefined}
+      suppressHydrationWarning
       className={cn("ml11", className)}
     >
       <span className="ml11-text-wrapper">
@@ -370,13 +374,14 @@ export function AwardItem({ year, title }: AwardItemProps) {
       ref={setRef}
       data-ml16=""
       data-ml16-play={play ? "" : undefined}
+      suppressHydrationWarning
       className="ml16 text-sm leading-relaxed text-muted-foreground"
     >
       <span ref={lettersRef} className="ml16-letters">
         {splitWords(yearText, (char, i) => (
           <span
             key={`y-${i}-${char}`}
-            className="ml16-letter font-medium text-foreground"
+            className="ml16-letter text-foreground"
           >
             {char}
           </span>

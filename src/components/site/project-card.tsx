@@ -70,7 +70,7 @@ export function ProjectCard({
 
   const meta = centerCaption ? (
     <>
-      <h3 className="mt-2.5 w-full text-center font-[family-name:var(--font-ui)] text-[13px] uppercase leading-tight tracking-[0.06em] text-foreground md:mt-3 md:text-sm">
+      <h3 className="mt-2.5 w-full text-center site-label-text font-[family-name:var(--font-ui)] uppercase leading-tight tracking-[0.06em] text-foreground md:mt-3">
         {project.title}
       </h3>
       <p className="mt-1 w-full text-center text-[11px] leading-snug text-foreground md:text-xs">

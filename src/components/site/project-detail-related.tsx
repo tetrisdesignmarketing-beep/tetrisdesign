@@ -191,6 +191,35 @@ export function ProjectDetailRelated({
     const raf = window.requestAnimationFrame(refresh);
     window.addEventListener("resize", refresh);
 
+    /* Lần đầu vào trang: ảnh gallery phía trên (height:auto) còn đang tải nên
+       trang ngắn hơn thực tế → ScrollTrigger tính điểm start/end quá sớm; tới
+       lúc cuộn xuống, ảnh đã tải xong đẩy khối này xuống dưới → đã vượt quá
+       "end", animation coi như chạy xong (không thấy chữ/ảnh bay vào). Refresh
+       có thể lấy lại cache ảnh nên lần 2 mới đúng. Theo dõi chiều cao trang và
+       tính lại vị trí trigger mỗi khi layout phía trên đổi (debounce). */
+    let layoutTimer = 0;
+    let lastHeight = document.documentElement.scrollHeight;
+    const scheduleRefresh = () => {
+      window.clearTimeout(layoutTimer);
+      layoutTimer = window.setTimeout(() => {
+        const height = document.documentElement.scrollHeight;
+        if (height === lastHeight) return;
+        lastHeight = height;
+        refresh();
+      }, 150);
+    };
+    const layoutObserver =
+      typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(scheduleRefresh)
+        : null;
+    layoutObserver?.observe(document.body);
+    const onWindowLoad = () => {
+      lastHeight = -1;
+      scheduleRefresh();
+    };
+    window.addEventListener("load", onWindowLoad);
+    document.fonts?.ready.then(onWindowLoad).catch(() => {});
+
     const panel = root.closest<HTMLElement>("[data-fps-panel]");
     const motionObserver = panel
       ? new MutationObserver(() => {
@@ -206,6 +235,9 @@ export function ProjectDetailRelated({
     return () => {
       window.cancelAnimationFrame(raf);
       window.removeEventListener("resize", refresh);
+      window.removeEventListener("load", onWindowLoad);
+      window.clearTimeout(layoutTimer);
+      layoutObserver?.disconnect();
       motionObserver?.disconnect();
       ctx.revert();
     };

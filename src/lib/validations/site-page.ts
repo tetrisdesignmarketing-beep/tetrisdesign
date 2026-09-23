@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { VN_PROVINCES } from "@/lib/vn-provinces";
 import { mediaPathSchema } from "@/lib/validations/shared";
+import { isValidPartnerHref, normalizePartnerHref } from "@/lib/partner-href";
 
 export const SITE_PAGE_SLUGS = [
   "home",
@@ -60,6 +61,26 @@ const awardGroupSchema = z.object({
   items: z.array(awardItemSchema).min(1),
 });
 
+/**
+ * Link logo đối tác — lưu DB / đọc public. `optional` để JSON cũ (chưa có
+ * field) vẫn parse được (không rơi về nội dung mặc định). Chuẩn hoá khi lưu:
+ * tự thêm https://, bỏ scheme không phải http(s).
+ */
+const partnerHrefStoredSchema = z
+  .string()
+  .max(2048)
+  .optional()
+  .transform((value) => normalizePartnerHref(value));
+
+/** Form admin — luôn là string (input = output cho RHF + zodResolver). */
+const partnerHrefFormSchema = z
+  .string()
+  .max(2048, "Link tối đa 2048 ký tự")
+  .refine(
+    isValidPartnerHref,
+    "Link không hợp lệ (vd. amway.com hoặc https://amway.com)",
+  );
+
 export const aboutPageSchema = z.object({
   heroImage: mediaPathSchema,
   brandBreakImage: mediaPathSchema,
@@ -82,6 +103,23 @@ export const aboutPageSchema = z.object({
         z.object({
           name: z.string().min(1).max(200),
           logo: mediaPathSchema,
+          href: partnerHrefStoredSchema,
+        }),
+      )
+      .min(1),
+  }),
+});
+
+/** Form admin About — giống `aboutPageSchema`, chỉ khác `href` đối tác. */
+export const aboutPageFormSchema = aboutPageSchema.extend({
+  partners: z.object({
+    title: z.string().min(1).max(200),
+    items: z
+      .array(
+        z.object({
+          name: z.string().min(1).max(200),
+          logo: mediaPathSchema,
+          href: partnerHrefFormSchema,
         }),
       )
       .min(1),

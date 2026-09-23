@@ -50,7 +50,7 @@ export function ProjectFilter({ stickTo = "header" }: ProjectFilterProps) {
                   setCategory(isActive ? null : category.id);
                 }}
                 className={cn(
-                  "inline-flex min-h-11 items-center justify-center touch-manipulation text-xs font-medium uppercase tracking-[0.25em]",
+                  "inline-flex min-h-11 items-center justify-center touch-manipulation site-label-text uppercase tracking-[0.25em]",
                   isActive
                     ? "text-brand-red"
                     : "text-foreground hover:text-brand-red",
@@ -77,7 +77,7 @@ export function ProjectFilter({ stickTo = "header" }: ProjectFilterProps) {
               setCategory(null);
             }}
             className={cn(
-              "inline-flex min-h-11 items-center justify-center border-b border-transparent pb-0.5 text-sm font-medium uppercase tracking-[0.25em] text-foreground transition-colors",
+              "inline-flex min-h-11 items-center justify-center border-b border-transparent pb-0.5 site-label-text uppercase tracking-[0.25em] text-foreground transition-colors",
               active === null
                 ? "border-foreground"
                 : "hover:border-foreground/40",
@@ -103,7 +103,7 @@ export function ProjectFilter({ stickTo = "header" }: ProjectFilterProps) {
                   setCategory(category.id);
                 }}
                 className={cn(
-                  "inline-flex min-h-11 items-center justify-center border-b border-transparent pb-0.5 text-sm font-medium uppercase tracking-[0.25em] text-foreground transition-colors",
+                  "inline-flex min-h-11 items-center justify-center border-b border-transparent pb-0.5 site-label-text uppercase tracking-[0.25em] text-foreground transition-colors",
                   isActive
                     ? "border-foreground"
                     : "hover:border-foreground/40",

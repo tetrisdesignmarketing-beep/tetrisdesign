@@ -22,8 +22,9 @@ export default function SiteLayout({
       <SiteHeader />
       <main className="flex-1">{children}</main>
       {/* File tĩnh, không qua bundle Next — About morph vẫn scale khi chunk lỗi */}
-      <script src="/morph-pin.js?v=7" defer />
+      <script src="/morph-pin.js?v=11" defer />
       <script src="/fps-pager.js?v=4" defer />
+      <script src="/partners-marquee.js?v=2" defer />
     </SiteLoadingProvider>
   );
 }

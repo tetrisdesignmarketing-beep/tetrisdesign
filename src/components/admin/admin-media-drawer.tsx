@@ -15,6 +15,7 @@ import {
   applySeedTitles,
   applyTitleConflicts,
   commitSeedTitle,
+  fileNameToMediaTitle,
   type MediaTitleConflict,
   updatePendingTitle,
 } from "@/lib/media-upload-titles";
@@ -100,6 +101,8 @@ export function AdminMediaDrawer() {
   const [fullScreen, setFullScreen] = useState(false);
   const [preview, setPreview] = useState<PreviewTarget | null>(null);
   const [pickerSelection, setPickerSelection] = useState<string[]>([]);
+  /* Checkbox "Lấy tên file": bật → title mỗi file = tên file (bỏ đuôi). */
+  const [useFileNames, setUseFileNames] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const {
     media,
@@ -167,13 +170,14 @@ export function AdminMediaDrawer() {
       id: crypto.randomUUID(),
       file,
       previewUrl: URL.createObjectURL(file),
-      title: "",
+      title: useFileNames ? fileNameToMediaTitle(file.name) : "",
       dirty: false,
     }));
 
     setPending((prev) => {
       const next = [...prev, ...additions];
-      if (!seedId) return next;
+      /* Đang lấy tên file → không áp title mẫu (seed) lên file mới. */
+      if (useFileNames || !seedId) return next;
       const seed = next.find((item) => item.id === seedId);
       if (!seed?.title.trim()) return next;
       return applySeedTitles(next, seedId, seed.title);
@@ -194,6 +198,11 @@ export function AdminMediaDrawer() {
 
   const handleTitleBlur = (itemId: string, value: string) => {
     const withValue = updatePendingTitle(pending, itemId, value);
+    /* Lấy tên file: sửa 1 ô chỉ đổi ô đó, không nhân title ra các file khác. */
+    if (useFileNames) {
+      setPending(withValue);
+      return;
+    }
     const result = commitSeedTitle(withValue, itemId);
     if (!result.committed) {
       setPending(withValue);
@@ -201,6 +210,23 @@ export function AdminMediaDrawer() {
     }
     setPending(result.pending);
     setSeedId(result.seedId);
+  };
+
+  /* Bật: mọi file trong hàng đợi lấy tên file. Tắt: xoá các title vẫn đang
+     đúng bằng tên file (chưa sửa tay), giữ title admin đã tự sửa. */
+  const handleUseFileNamesChange = (checked: boolean) => {
+    setUseFileNames(checked);
+    setSeedId(null);
+    setConflictIds(new Set());
+    setPending((prev) =>
+      prev.map((item) => {
+        const fromName = fileNameToMediaTitle(item.file.name);
+        if (checked) return { ...item, title: fromName, dirty: true };
+        return item.title === fromName
+          ? { ...item, title: "", dirty: false }
+          : item;
+      }),
+    );
   };
 
   const removePending = (id: string) => {
@@ -527,6 +553,21 @@ export function AdminMediaDrawer() {
           </div>
           )}
 
+          <label
+            htmlFor="media-use-file-names"
+            className="flex cursor-pointer items-center gap-2 text-sm"
+          >
+            <input
+              id="media-use-file-names"
+              type="checkbox"
+              className="h-4 w-4 cursor-pointer accent-primary"
+              checked={useFileNames}
+              disabled={uploading}
+              onChange={(e) => handleUseFileNamesChange(e.target.checked)}
+            />
+            Lấy tên file
+          </label>
+
           {pending.length > 0 && (
             <div className="space-y-3">
               <ul className="max-h-64 space-y-2 overflow-y-auto pr-1">
@@ -573,23 +614,44 @@ export function AdminMediaDrawer() {
                       >
                         Title ảnh {index + 1}
                       </Label>
-                      <Input
-                        id={`pending-title-${item.id}`}
-                        value={item.title}
-                        onChange={(e) =>
-                          handleTitleChange(item.id, e.target.value)
-                        }
-                        onBlur={(e) => handleTitleBlur(item.id, e.target.value)}
-                        placeholder={`Title ảnh ${index + 1}`}
-                        maxLength={MEDIA_TITLE_MAX}
-                        disabled={uploading}
-                        aria-invalid={conflictIds.has(item.id)}
-                        className={
-                          conflictIds.has(item.id)
-                            ? "border-destructive focus-visible:ring-destructive"
-                            : undefined
-                        }
-                      />
+                      <div className="relative">
+                        <Input
+                          id={`pending-title-${item.id}`}
+                          value={item.title}
+                          onChange={(e) =>
+                            handleTitleChange(item.id, e.target.value)
+                          }
+                          onBlur={(e) =>
+                            handleTitleBlur(item.id, e.target.value)
+                          }
+                          placeholder={`Title ảnh ${index + 1}`}
+                          maxLength={MEDIA_TITLE_MAX}
+                          disabled={uploading}
+                          aria-invalid={conflictIds.has(item.id)}
+                          className={cn(
+                            item.title && "pr-8",
+                            conflictIds.has(item.id) &&
+                              "border-destructive focus-visible:ring-destructive",
+                          )}
+                        />
+                        {item.title && !uploading ? (
+                          <button
+                            type="button"
+                            className="absolute right-1 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                            /* Giữ focus ở input: không để blur chạy trước khi xoá */
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => {
+                              handleTitleChange(item.id, "");
+                              document
+                                .getElementById(`pending-title-${item.id}`)
+                                ?.focus();
+                            }}
+                            aria-label={`Xoá title ảnh ${index + 1}`}
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        ) : null}
+                      </div>
                     </div>
                     <div className="flex shrink-0 flex-col gap-1">
                       <Button

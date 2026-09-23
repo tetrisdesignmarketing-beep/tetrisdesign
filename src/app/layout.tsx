@@ -9,11 +9,14 @@ import "./globals.css";
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  /* Chỉ là fallback sau Gilroy — preload thì tải về mà không dùng */
+  preload: false,
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  preload: false,
 });
 
 export const viewport: Viewport = {
@@ -53,9 +56,19 @@ export default function RootLayout({
   return (
     <html
       lang="vi"
+      suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <head>
+        {/* Đã xem intro loading trong phiên → gắn cờ trước lần vẽ đầu (CSS ẩn
+            intro), tránh overlay chớp lên rồi mới bị React gỡ. */}
+        <script
+          id="site-intro-flag"
+          dangerouslySetInnerHTML={{
+            __html:
+              "try{if(sessionStorage.getItem('site-loading-intro-done')==='1')document.documentElement.setAttribute('data-intro-done','')}catch(e){}",
+          }}
+        />
         {process.env.NODE_ENV === "production" ? null : (
           <script
             id="site-dev-probe"
@@ -71,7 +84,7 @@ export default function RootLayout({
         />
         <link
           rel="preload"
-          href="/fonts/UTMAvo.woff2"
+          href="/fonts/Gilroy-Regular.woff2"
           as="font"
           type="font/woff2"
           crossOrigin="anonymous"

@@ -24,6 +24,19 @@ type ProgressiveImageProps = {
    * Set false only when a smaller optimizer full layer is intentional.
    */
   fullUseOriginal?: boolean;
+  /**
+   * Full layer gets a `srcSet` (optimizer `fullWidth`w + original) so phones
+   * pick the ~`fullWidth` px version instead of the multi-MB original, while
+   * desktop / retina-wide screens still pick the original. Pure HTML — the
+   * browser chooses per device, no JS / hydration concerns.
+   */
+  fullResponsive?: boolean;
+  /**
+   * Hide (visibility) the preview layer once the sharp layer has faded in —
+   * one image to paint instead of two stacked (matters for images that
+   * scale every scroll frame, e.g. About morph-pin).
+   */
+  hidePreviewWhenFull?: boolean;
   /** Fetch the small image. Offscreen slides stay unloaded. */
   loadPreview?: boolean;
   /** Fetch the sharp image after the preview is visible. */
@@ -56,6 +69,8 @@ export function ProgressiveImage({
   previewQuality = CANVAS_PREVIEW_QUALITY,
   fullQuality = CANVAS_FULL_QUALITY,
   fullUseOriginal = true,
+  fullResponsive = false,
+  hidePreviewWhenFull = false,
   loadPreview = true,
   loadFull = true,
   persistFull = false,
@@ -68,7 +83,11 @@ export function ProgressiveImage({
 }: ProgressiveImageProps) {
   const reduced = usePrefersReducedMotion();
   const original = src.trim();
-  const previewTarget = optimizedImageSrc(original, previewWidth, previewQuality);
+  const previewTarget = optimizedImageSrc(
+    original,
+    previewWidth,
+    previewQuality,
+  );
   const fullTarget = fullUseOriginal
     ? original
     : optimizedImageSrc(original, fullWidth, fullQuality);
@@ -90,8 +109,27 @@ export function ProgressiveImage({
     setFullReady(false);
   }, [fullTarget, previewTarget, targetKey]);
 
-  const wantFull =
-    loadFull || (persistFull && fullReady);
+  /* Chỉ ẩn preview SAU khi lớp nét đã fade xong (200ms) — tránh chớp nền.
+     State chỉ set trong callback timer; điều kiện ẩn suy ra lúc render. */
+  const [previewHiddenFor, setPreviewHiddenFor] = useState<string | null>(null);
+  useEffect(() => {
+    if (!hidePreviewWhenFull || !fullReady) return;
+    const timer = window.setTimeout(() => setPreviewHiddenFor(fullSrc), 300);
+    return () => window.clearTimeout(timer);
+  }, [hidePreviewWhenFull, fullReady, fullSrc]);
+  const previewHidden =
+    hidePreviewWhenFull && fullReady && previewHiddenFor === fullSrc;
+
+  const responsiveFull =
+    fullResponsive && fullUseOriginal
+      ? optimizedImageSrc(original, fullWidth, fullQuality)
+      : null;
+  const fullSrcSet =
+    responsiveFull && responsiveFull !== original && fullSrc === original
+      ? `${responsiveFull} ${fullWidth}w, ${original} 4096w`
+      : undefined;
+
+  const wantFull = loadFull || (persistFull && fullReady);
   const showFull = wantFull && previewReady && previewSrc !== fullSrc;
 
   useEffect(() => {
@@ -136,50 +174,52 @@ export function ProgressiveImage({
   }
 
   const layer =
-    layout === "flow" ? "block h-auto w-full" : "absolute inset-0 h-full w-full";
-  const fullLayer =
     layout === "flow"
-      ? "absolute inset-0 !h-full !w-full"
-      : layer;
+      ? "block h-auto w-full"
+      : "absolute inset-0 h-full w-full";
+  const fullLayer =
+    layout === "flow" ? "absolute inset-0 !h-full !w-full" : layer;
 
   const preview = loadPreview ? (
-        <img
-          ref={previewRef}
-          src={previewSrc}
-          alt={fullReady ? "" : alt}
-          aria-hidden={fullReady || undefined}
-          draggable={false}
-          decoding="async"
-          loading={loading}
-          fetchPriority={priority ? "high" : "auto"}
-          onLoad={() => setPreviewReady(true)}
-          onError={() => {
-            if (previewSrc !== original) setPreviewSrc(original);
-          }}
-          className={cn(layer, className)}
-        />
+    <img
+      ref={previewRef}
+      src={previewSrc}
+      alt={fullReady ? "" : alt}
+      aria-hidden={fullReady || undefined}
+      draggable={false}
+      decoding="async"
+      loading={loading}
+      fetchPriority={priority ? "high" : "auto"}
+      onLoad={() => setPreviewReady(true)}
+      onError={() => {
+        if (previewSrc !== original) setPreviewSrc(original);
+      }}
+      className={cn(layer, className, previewHidden && "invisible")}
+    />
   ) : null;
   const full = showFull ? (
-        <img
-          ref={fullRef}
-          src={fullSrc}
-          data-progressive-full=""
-          alt={fullReady ? alt : ""}
-          aria-hidden={fullReady ? undefined : true}
-          draggable={false}
-          decoding="async"
-          onLoad={() => setFullReady(true)}
-          onError={() => {
-            if (fullSrc !== original) setFullSrc(original);
-          }}
-          className={cn(
-            fullLayer,
-            className,
-            !fullReady && "opacity-0",
-            fade && fullReady && "opacity-100",
-            fade && !reduced && "transition-opacity duration-200",
-          )}
-        />
+    <img
+      ref={fullRef}
+      src={fullSrc}
+      srcSet={fullSrcSet}
+      sizes={fullSrcSet ? sizes : undefined}
+      data-progressive-full=""
+      alt={fullReady ? alt : ""}
+      aria-hidden={fullReady ? undefined : true}
+      draggable={false}
+      decoding="async"
+      onLoad={() => setFullReady(true)}
+      onError={() => {
+        if (fullSrc !== original) setFullSrc(original);
+      }}
+      className={cn(
+        fullLayer,
+        className,
+        !fullReady && "opacity-0",
+        fade && fullReady && "opacity-100",
+        fade && !reduced && "transition-opacity duration-200",
+      )}
+    />
   ) : null;
 
   if (layout === "flow") {

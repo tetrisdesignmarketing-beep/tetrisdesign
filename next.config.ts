@@ -45,7 +45,8 @@ const nextConfig: NextConfig = {
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
     formats: ["image/avif", "image/webp"],
     // 45 = canvas preview; 75 = default next/image + canvas full
-    qualities: [45, 75],
+    // 30 = THỬ NGHIỆM tạm (About morph) — xoá khi test xong
+    qualities: [30, 45, 75],
     deviceSizes: [640, 750, 828, 1080, 1200],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
     remotePatterns: [

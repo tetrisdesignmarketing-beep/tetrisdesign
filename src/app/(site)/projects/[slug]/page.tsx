@@ -112,7 +112,15 @@ export default async function ProjectDetailPage({
 
       {layoutStyle === "LAYOUTDEFAULT" ? (
         <>
-          {projectDetailContent}
+          {project.description ? (
+            /* Default: khối tiêu đề cách header 32px, cách lưới ảnh 32px. */
+            <ProjectDetailContent
+              concept={project.categoryLabel}
+              address={project.location}
+              description={project.description}
+              className="project-detail-content--default py-8"
+            />
+          ) : null}
           {gallery}
         </>
       ) : (

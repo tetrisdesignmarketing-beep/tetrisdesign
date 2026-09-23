@@ -23,6 +23,12 @@ export function clipMediaTitle(value: string) {
   return value.slice(0, MEDIA_TITLE_MAX);
 }
 
+/** Title lấy từ tên file: bỏ phần mở rộng (".jpg"…); tên chỉ có đuôi → giữ nguyên. */
+export function fileNameToMediaTitle(fileName: string) {
+  const base = fileName.replace(/\.[^./\\]+$/, "").trim();
+  return clipMediaTitle(base || fileName.trim());
+}
+
 export function applySeedTitles<T extends PendingUploadTitle>(
   pending: T[],
   seedId: string,

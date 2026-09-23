@@ -6,16 +6,15 @@ import {
   PARTNER_LOGO_FULL_WIDTH,
   PARTNER_LOGO_PREVIEW_WIDTH,
 } from "@/lib/optimized-image-src";
-import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
+import type { CSSProperties } from "react";
+import { normalizePartnerHref } from "@/lib/partner-href";
 import { cn } from "@/lib/utils";
-import { Autoplay, FreeMode } from "swiper/modules";
-import { Swiper, SwiperSlide } from "swiper/react";
-import "swiper/css";
-import "swiper/css/free-mode";
 
 interface Partner {
   name: string;
   logo: string;
+  /** Có link → bấm logo mở tab mới. Trống → không bấm được. */
+  href?: string;
 }
 
 interface PartnersRowProps {
@@ -42,8 +41,13 @@ function buildLoopSlides(partners: readonly Partner[]): Partner[] {
   return slides;
 }
 
-function PartnerLogo({ name, logo }: Partner) {
-  return (
+function PartnerLogo({
+  name,
+  logo,
+  href,
+  hidden = false,
+}: Partner & { hidden?: boolean }) {
+  const image = (
     <div className="relative h-16 w-full md:h-24 lg:h-28">
       <ProgressiveImage
         src={logo}
@@ -56,7 +60,31 @@ function PartnerLogo({ name, logo }: Partner) {
       />
     </div>
   );
+
+  const url = normalizePartnerHref(href);
+  if (!url) return image;
+
+  /* target=_blank → trình duyệt mở tab mới và chuyển sang tab đó.
+     draggable=false: tránh kéo-thả link mặc định làm hỏng thao tác kéo
+     carousel (xem public/partners-marquee.js). Bản sao (hidden) không nhận
+     focus bàn phím. */
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      draggable={false}
+      tabIndex={hidden ? -1 : undefined}
+      aria-label={`${name} (mở tab mới)`}
+      className="partners-marquee__link"
+    >
+      {image}
+    </a>
+  );
 }
+
+/* Tương tác (giữ để dừng, vuốt/kéo theo tay, hover dừng) nằm ở file tĩnh
+   public/partners-marquee.js — chạy cả khi React chưa/không hydrate. */
 
 export function PartnersRow({
   title,
@@ -67,20 +95,27 @@ export function PartnersRow({
   lettersSectionId = "about-brand-break",
   forceLettersPlay = false,
 }: PartnersRowProps) {
-  const reducedMotion = usePrefersReducedMotion();
   const loopSlides = buildLoopSlides(partners);
-  /* Luôn dùng Swiper khi có partner — đảm bảo CHỈ 1 hàng (flex nowrap) trên
-     mọi màn hình/thiết bị. Trước đây reduced-motion rơi về <ul grid-cols-3>,
-     wrap thành nhiều hàng khi > 3 partner. Tôn trọng reduced-motion bằng cách
-     tắt autoplay (không tự trượt) chứ không đổi layout. */
+  /* Marquee CSS thuần (thay Swiper autoplay delay:0 + freeMode + loop).
+     Chuỗi autoplay của Swiper sống nhờ JS: chỉ chạy sau khi React hydrate (lần
+     đầu vào trang / điện thoại hydrate chậm → đứng yên, chỉ thấy 1 logo vì
+     slide chưa init rộng 100%), và dừng hẳn khi 1 transition bị cắt ngang
+     (resize khi thanh URL co giãn lúc cuộn tới đáy, đổi tab…) mà không có
+     "transitionend" để nối tiếp. Animation CSS chạy ngay từ HTML server, trên
+     compositor, không phụ thuộc React/JS, không thể "kẹt". Danh sách nhân đôi,
+     track trượt đúng -50% rồi lặp → liền mạch. 1 hàng, 3 logo/khung như cũ. */
   const useMarquee = loopSlides.length > 0;
+  const marqueeStyle = {
+    /* Swiper cũ: speed 6000ms mỗi slide → giữ đúng tốc độ. */
+    "--partners-marquee-duration": `${loopSlides.length * 6}s`,
+  } as CSSProperties;
 
   return (
     <section className={cn("py-12 pb-16", className)}>
       <h2
         data-section-title=""
         data-ml2-heading={headingEffect === "ml2" ? "" : undefined}
-        className="text-center text-sm font-bold uppercase"
+        className="site-label-text text-center uppercase"
       >
         {headingEffect === "ml2" ? (
           <MovingLettersPop
@@ -96,71 +131,36 @@ export function PartnersRow({
       {!useMarquee ? null : (
         <div
           data-partners-scroll=""
+          suppressHydrationWarning
           className="partners-marquee mt-10 md:mt-12"
         >
-          <Swiper
-            modules={[Autoplay, FreeMode]}
-            className="w-full"
-            wrapperTag="ul"
-            slidesPerView={SLIDES_PER_VIEW}
-            spaceBetween={24}
-            breakpoints={{
-              768: { spaceBetween: 64 },
-            }}
-            loop
-            speed={6000}
-            allowTouchMove
-            simulateTouch
-            grabCursor
-            freeMode={{
-              enabled: true,
-              momentum: false,
-            }}
-            // `waitForTransition: false` — mặc định Swiper CHỜ 1 sự kiện DOM
-            // "transitionend" trên wrapper trước khi tự resume autoplay sau khi
-            // pause do tương tác (chạm/kéo/rời trang). Với freeMode + momentum:
-            // false, cú "nhả tay" không phải lúc nào cũng áp CSS transition thật
-            // (tuỳ trình duyệt/thiết bị) → "transitionend" có thể KHÔNG BAO GIỜ
-            // bắn ra, autoplay bị kẹt "paused" vĩnh viễn ngay sau lần chạm đầu
-            // tiên — đúng triệu chứng "1 số thiết bị không auto slide". Tắt chờ
-            // này để resume ngay lập tức, không phụ thuộc sự kiện DOM có thể
-            // không xảy ra (đã xác nhận qua source `node_modules/swiper/modules
-            // /autoplay.min.mjs`, không phải đoán).
-            autoplay={
-              reducedMotion
-                ? false
-                : {
-                    delay: 0,
-                    disableOnInteraction: false,
-                    pauseOnMouseEnter: false,
-                    waitForTransition: false,
-                  }
-            }
-            watchSlidesProgress
-            observer
-            observeParents
+          <ul
             data-partners-logos=""
             data-section-body=""
             data-text-focus-in={logoEffect === "text-focus-in" ? "" : undefined}
             aria-label={title}
-            onTouchEnd={(swiper) => {
-              // Lưới an toàn dự phòng (không còn là fix chính — xem giải thích ở
-              // `autoplay` phía trên): check đúng field `paused` (không phải
-              // `running`, field này Swiper không tự tắt khi chỉ pause) rồi resume.
-              if (swiper.autoplay.paused) swiper.autoplay.resume();
-              else if (!swiper.autoplay.running) swiper.autoplay.start();
-            }}
+            className="partners-marquee__track"
+            style={marqueeStyle}
           >
             {loopSlides.map((partner, index) => (
-              <SwiperSlide
+              <li
                 key={`${partner.name}-${index}`}
-                tag="li"
-                className="!flex items-center justify-center"
+                className="partners-marquee__item"
               >
                 <PartnerLogo {...partner} />
-              </SwiperSlide>
+              </li>
             ))}
-          </Swiper>
+            {/* Bản sao cho vòng lặp liền mạch — ẩn khỏi trình đọc màn hình. */}
+            {loopSlides.map((partner, index) => (
+              <li
+                key={`dup-${partner.name}-${index}`}
+                aria-hidden="true"
+                className="partners-marquee__item"
+              >
+                <PartnerLogo {...partner} hidden />
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </section>

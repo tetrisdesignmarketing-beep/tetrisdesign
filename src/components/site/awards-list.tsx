@@ -12,7 +12,7 @@ export function AwardsList({ title, groups, className }: AwardsListProps) {
     <section className={cn("py-12", className)}>
       <h2
         data-section-title=""
-        className="text-sm uppercase"
+        className="site-label-text uppercase"
       >
         <span data-scroll-blur="">{title}</span>
       </h2>
@@ -26,7 +26,7 @@ export function AwardsList({ title, groups, className }: AwardsListProps) {
                   key={`${item.year}-${item.title}`}
                   className="text-sm leading-relaxed text-muted-foreground"
                 >
-                  <span className="font-medium text-foreground">{item.year}</span>
+                  <span className="text-foreground">{item.year}</span>
                   {" — "}
                   {item.title}
                 </li>
