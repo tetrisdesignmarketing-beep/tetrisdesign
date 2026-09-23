@@ -81,6 +81,8 @@ export async function POST(request: Request) {
     let finalFilename: string;
     let finalMime: string;
     let finalSize: number;
+    let finalWidth: number | null = null;
+    let finalHeight: number | null = null;
 
     if (OPTIMIZABLE_MIME.has(mimeType)) {
       const { optimizeImageForUpload } = await import("@/lib/optimize-image");
@@ -90,6 +92,8 @@ export async function POST(request: Request) {
         mimeType,
         filename,
       );
+      finalWidth = optimized.width ?? null;
+      finalHeight = optimized.height ?? null;
 
       if (
         mediaType === "image" &&
@@ -150,6 +154,12 @@ export async function POST(request: Request) {
         type: mediaType,
       },
     });
+    const { saveMediaDimensions } = await import("@/lib/media-dimensions");
+    await saveMediaDimensions(
+      media.id,
+      finalWidth ?? undefined,
+      finalHeight ?? undefined,
+    );
 
     return NextResponse.json(media, { status: 201 });
   } catch (err) {

@@ -168,6 +168,8 @@ export async function POST(request: Request) {
         type: validation.type,
       },
     });
+    const { saveMediaDimensions } = await import("@/lib/media-dimensions");
+    await saveMediaDimensions(media.id, optimized.width, optimized.height);
 
     return NextResponse.json(media, { status: 201 });
   } catch (err) {

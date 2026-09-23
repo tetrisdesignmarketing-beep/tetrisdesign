@@ -14,6 +14,7 @@ import {
   getSiteProjectBySlug,
 } from "@/lib/get-site-project";
 import { getSiteContact } from "@/lib/get-site-contact";
+import { getMediaDimensionsByUrl } from "@/lib/media-dimensions";
 import { getProjectCover, getProjectImages } from "@/lib/site-content";
 import { createPageMetadata } from "@/lib/site-metadata";
 
@@ -85,7 +86,12 @@ export default async function ProjectDetailPage({
   if (images.length > 0) {
     gallery =
       layoutStyle === "LAYOUTDEFAULT" ? (
-        <ProjectDetailImagesDefault images={images} title={project.title} />
+        <ProjectDetailImagesDefault
+          images={images}
+          title={project.title}
+          /* Kích thước thật từ Media → biết ảnh dọc/ngang ngay từ HTML. */
+          dimensions={await getMediaDimensionsByUrl(images)}
+        />
       ) : (
         <ProjectDetailImages images={images} title={project.title} />
       );

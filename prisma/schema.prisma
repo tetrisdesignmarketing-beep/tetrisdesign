@@ -86,6 +86,9 @@ model Media {
   mimeType  String
   size      Int
   type      String
+  /// Kích thước ảnh đã lưu (sau xoay EXIF / nén). Null: video, SVG, ảnh cũ chưa backfill.
+  width     Int?
+  height    Int?
   createdAt DateTime @default(now())
 
   @@index([type, createdAt(sort: Desc)])

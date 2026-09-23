@@ -2286,6 +2286,41 @@ ul:has(.project-card-hover-scale) {
   width: 100%;
 }
 
+/* Mobile/tablet: bỏ nhóm cặp, trả ảnh về đúng thứ tự admin (order = vị trí gốc). */
+@media (max-width: 1023px) {
+  .project-detail-images-default__pair {
+    display: contents;
+  }
+
+  .project-detail-images-default__item {
+    order: var(--pd-order, 0);
+  }
+}
+
+/* Desktop: 2 ảnh dọc cạnh nhau, cùng chiều cao, rộng theo tỷ lệ thật (không
+   cắt ảnh). Bề rộng hàng giới hạn để chiều cao ≤ khung dưới menu. */
+@media (min-width: 1024px) {
+  .project-detail-images-default__pair {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 1rem;
+    width: min(
+      100%,
+      calc(
+        (100dvh - var(--site-header-total-height)) * var(--pd-pair-ratio, 1.5) +
+          1rem
+      )
+    );
+    margin-inline: auto;
+  }
+
+  .project-detail-images-default__pair > .project-detail-images-default__item {
+    flex: var(--pd-ratio, 1) 1 0;
+    min-width: 0;
+  }
+}
+
 .project-detail-images-default__trigger {
   position: relative;
   display: block;

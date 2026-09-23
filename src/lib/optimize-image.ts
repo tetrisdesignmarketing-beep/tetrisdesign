@@ -16,6 +16,9 @@ export type OptimizedUpload = {
   mimeType: string;
   filename: string;
   optimized: boolean;
+  /** Kích thước ảnh sẽ lưu (đã tính xoay EXIF). Không đọc được → undefined. */
+  width?: number;
+  height?: number;
 };
 
 type SharpFn = (typeof import("sharp"))["default"];
@@ -78,6 +81,14 @@ export async function optimizeImageForUpload(
 
     const width = meta.width ?? 0;
     const height = meta.height ?? 0;
+    /* EXIF orientation 5–8 = xoay 90° → trình duyệt hiển thị đổi chiều w/h. */
+    const swapped = (meta.orientation ?? 1) >= 5;
+    const displayWidth = swapped ? height : width;
+    const displayHeight = swapped ? width : height;
+    const passthroughWithSize: OptimizedUpload =
+      displayWidth > 0 && displayHeight > 0
+        ? { ...passthrough, width: displayWidth, height: displayHeight }
+        : passthrough;
     const needsResize =
       width > MEDIA_IMAGE_MAX_EDGE || height > MEDIA_IMAGE_MAX_EDGE;
 
@@ -91,12 +102,12 @@ export async function optimizeImageForUpload(
       });
     }
 
-    const output = await pipeline
+    const { data: output, info } = await pipeline
       .webp({ quality: MEDIA_WEBP_QUALITY })
-      .toBuffer();
+      .toBuffer({ resolveWithObject: true });
 
     if (!needsResize && output.length >= buffer.length) {
-      return passthrough;
+      return passthroughWithSize;
     }
 
     return {
@@ -104,6 +115,8 @@ export async function optimizeImageForUpload(
       mimeType: "image/webp",
       filename: withWebpExtension(originalName),
       optimized: true,
+      width: info.width,
+      height: info.height,
     };
   } catch {
     return passthrough;

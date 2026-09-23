@@ -11,7 +11,8 @@
     "db:push": "prisma db push && prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:seed": "prisma db seed",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "media:backfill-dimensions": "tsx scripts/backfill-media-dimensions.ts"
   },
   "browserslist": [
     "chrome >= 111",
