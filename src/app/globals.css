@@ -2297,30 +2297,6 @@ ul:has(.project-card-hover-scale) {
   }
 }
 
-/* Desktop: 2 ảnh dọc cạnh nhau, cùng chiều cao, rộng theo tỷ lệ thật (không
-   cắt ảnh). Bề rộng hàng giới hạn để chiều cao ≤ khung dưới menu. */
-@media (min-width: 1024px) {
-  .project-detail-images-default__pair {
-    display: flex;
-    align-items: flex-start;
-    justify-content: center;
-    gap: 1rem;
-    width: min(
-      100%,
-      calc(
-        (100dvh - var(--site-header-total-height)) * var(--pd-pair-ratio, 1.5) +
-          1rem
-      )
-    );
-    margin-inline: auto;
-  }
-
-  .project-detail-images-default__pair > .project-detail-images-default__item {
-    flex: var(--pd-ratio, 1) 1 0;
-    min-width: 0;
-  }
-}
-
 .project-detail-images-default__trigger {
   position: relative;
   display: block;
@@ -2343,32 +2319,55 @@ ul:has(.project-card-hover-scale) {
   height: auto;
 }
 
-/* Desktop: ảnh to hết mức trong khung (100vw × chiều cao còn lại dưới menu) mà
-   vẫn vừa 1 màn hình — object-fit: contain tự quyết theo tỉ lệ ảnh:
-   ảnh dọc chạm trên dưới (viền menu → đáy màn hình), ảnh ngang chạm 2 biên. */
+/* Desktop: mỗi "hàng" = đúng 1 khung màn hình dưới menu (100% rộng × 100dvh −
+   header) trên MỌI tỷ lệ màn hình → không còn hàng thấp hơn màn hình để hàng
+   kế tiếp ló vào. Ảnh ngang: 1 ảnh phủ kín khung. 2 ảnh dọc: mỗi ảnh nửa
+   khung, phủ kín. Phủ kín = object-fit: cover (cắt phần dư quanh tâm ảnh khi
+   tỷ lệ ảnh khác tỷ lệ khung). Ảnh dọc lẻ không có cặp: cao đủ khung, giữ
+   nguyên ảnh (contain), căn giữa. */
 @media (min-width: 1024px) {
   .project-detail-images-default {
-    padding-inline: 0;
+    --pd-screen-h: calc(100dvh - var(--site-header-total-height));
+    /* Lề 2 bên 28px (= lề header) — ảnh phủ kín phần còn lại. */
+    padding-inline: var(--site-header-pad-inline);
   }
 
-  .project-detail-images-default__item {
+  .project-detail-images-default > .project-detail-images-default__item,
+  .project-detail-images-default__pair {
+    width: 100%;
+    height: var(--pd-screen-h);
+  }
+
+  .project-detail-images-default__pair {
     display: flex;
-    justify-content: center;
+    gap: 1rem;
+  }
+
+  .project-detail-images-default__pair > .project-detail-images-default__item {
+    flex: 1 1 0;
+    min-width: 0;
+    height: 100%;
   }
 
   .project-detail-images-default__trigger,
   .project-detail-images-default__trigger > span {
     width: 100%;
     max-width: 100%;
+    height: 100%;
   }
 
   .project-detail-images-default .project-detail-images-default__img {
     width: 100%;
     max-width: 100%;
-    height: auto;
-    max-height: calc(100dvh - var(--site-header-total-height));
-    object-fit: contain;
+    height: 100%;
+    max-height: none;
+    object-fit: cover;
     object-position: center;
+  }
+
+  .project-detail-images-default__item--portrait
+    .project-detail-images-default__img {
+    object-fit: contain;
   }
 }
 

@@ -127,13 +127,14 @@ export function ProjectDetailImagesDefault({
       <figure
         key={`${item.src}-${item.sourceIndex}`}
         ref={measureRef(item.sourceIndex, known || item.ratio !== null)}
-        className="project-detail-images-default__item"
-        style={
-          {
-            "--pd-order": item.sourceIndex,
-            ...(inPair && item.ratio ? { "--pd-ratio": item.ratio } : null),
-          } as CSSProperties
-        }
+        className={cn(
+          "project-detail-images-default__item",
+          /* Ảnh dọc lẻ (không có cặp): giữ nguyên ảnh, không cắt */
+          !inPair &&
+            isPortrait(item) &&
+            "project-detail-images-default__item--portrait",
+        )}
+        style={{ "--pd-order": item.sourceIndex } as CSSProperties}
       >
         <button
           type="button"
@@ -166,12 +167,6 @@ export function ProjectDetailImagesDefault({
           <div
             key={`pair-${row.items[0].sourceIndex}`}
             className="project-detail-images-default__pair"
-            style={
-              {
-                "--pd-pair-ratio":
-                  (row.items[0].ratio ?? 0) + (row.items[1].ratio ?? 0),
-              } as CSSProperties
-            }
           >
             {renderFigure(row.items[0], true)}
             {renderFigure(row.items[1], true)}
