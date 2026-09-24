@@ -6,9 +6,7 @@ import { ProgressiveImage } from "@/components/site/progressive-image";
 import type { MediaDimensions } from "@/lib/media-dimensions";
 import {
   CANVAS_FULL_WIDTH,
-  CANVAS_PREVIEW_QUALITY,
   CANVAS_PREVIEW_WIDTH,
-  optimizedImageSrc,
 } from "@/lib/optimized-image-src";
 import { cn } from "@/lib/utils";
 
@@ -43,7 +41,9 @@ function isPortrait(item: GalleryItem) {
 /**
  * Desktop: ảnh ngang = 1 hàng full; ảnh dọc luôn ghép cặp với ảnh dọc gần nhất
  * phía sau (bỏ qua ảnh ngang ở giữa) → thứ tự hiển thị có thể khác thứ tự
- * admin. Ảnh dọc cuối cùng không còn cặp → hàng đơn, căn giữa.
+ * admin. Ảnh dọc lẻ cuối cùng → ghép với hàng ảnh ngang liền trước (hoặc liền
+ * sau) thành 1 hàng "justified" (cùng chiều cao, rộng theo tỷ lệ) để vẫn phủ
+ * kín chiều ngang mà không cắt; chỉ khi không có hàng đơn kề bên mới đứng riêng.
  */
 function buildRows(items: GalleryItem[]): GalleryRow[] {
   const rows: GalleryRow[] = [];
@@ -63,33 +63,25 @@ function buildRows(items: GalleryItem[]): GalleryRow[] {
     openPair = { kind: "single", items: [item] };
     rows.push(openPair);
   }
+
+  if (openPair) {
+    const lone = openPair.items[0];
+    const index = rows.indexOf(openPair);
+    const prev = rows[index - 1];
+    const next = rows[index + 1];
+    if (prev?.kind === "single") {
+      rows.splice(index - 1, 2, { kind: "pair", items: [prev.items[0], lone] });
+    } else if (next?.kind === "single") {
+      rows.splice(index, 2, { kind: "pair", items: [lone, next.items[0]] });
+    }
+  }
   return rows;
 }
 
-/**
- * Nền mờ desktop: chính ảnh đó (bản preview nhỏ — cùng URL với lớp preview của
- * ProgressiveImage nên đã có trong cache) phủ kín khung + làm mờ, lấp phần
- * chênh khi ảnh hiện đủ (contain). Dùng background-image: mobile ẩn bằng
- * display:none nên không tải thêm.
- */
-function Backdrop({ srcs }: { srcs: string[] }) {
-  return (
-    <span className="project-detail-images-default__backdrop" aria-hidden>
-      {srcs.map((src, index) => (
-        <span
-          key={`${src}-${index}`}
-          className="project-detail-images-default__backdrop-img"
-          style={{
-            backgroundImage: `url("${optimizedImageSrc(
-              src,
-              CANVAS_PREVIEW_WIDTH,
-              CANVAS_PREVIEW_QUALITY,
-            ).replace(/"/g, "%22")}")`,
-          }}
-        />
-      ))}
-    </span>
-  );
+/** Phần chiều ngang của 1 ảnh trong hàng ghép = tỷ lệ ảnh / tổng tỷ lệ hàng. */
+function pairShareOf(items: GalleryItem[], item: GalleryItem) {
+  const total = items.reduce((sum, it) => sum + (it.ratio ?? 1), 0);
+  return total > 0 ? (item.ratio ?? 1) / total : 1 / items.length;
 }
 
 /** Gallery LAYOUTDEFAULT — cursor mắt khi hover, lightbox như LAYOUT1. */
@@ -150,7 +142,9 @@ export function ProjectDetailImagesDefault({
 
   if (images.length === 0) return null;
 
-  const renderFigure = (item: GalleryItem, inPair: boolean) => {
+  /** `pairShare` = phần chiều ngang của ảnh trong hàng ghép (0–1); undefined = hàng đơn. */
+  const renderFigure = (item: GalleryItem, pairShare?: number) => {
+    const inPair = pairShare !== undefined;
     const displayIndex = displayOrder.indexOf(item);
     const known = Boolean(dimensions?.[item.src]);
     return (
@@ -159,7 +153,7 @@ export function ProjectDetailImagesDefault({
         ref={measureRef(item.sourceIndex, known || item.ratio !== null)}
         className={cn(
           "project-detail-images-default__item",
-          /* Ảnh dọc lẻ (không có cặp): giữ nguyên ảnh, không cắt */
+          /* Ảnh dọc đứng riêng (không có hàng kề để ghép): cao tối đa 1 màn */
           !inPair &&
             isPortrait(item) &&
             "project-detail-images-default__item--portrait",
@@ -167,11 +161,11 @@ export function ProjectDetailImagesDefault({
         style={
           {
             "--pd-order": item.sourceIndex,
-            ...(inPair && item.ratio ? { "--pd-ratio": item.ratio } : null),
+            /* Khung đúng tỷ lệ ảnh → ảnh lấp kín khung, không cắt, không viền */
+            ...(item.ratio ? { "--pd-ratio": item.ratio } : null),
           } as CSSProperties
         }
       >
-        {inPair ? null : <Backdrop srcs={[item.src]} />}
         <button
           type="button"
           className="project-detail-images-default__trigger"
@@ -185,7 +179,11 @@ export function ProjectDetailImagesDefault({
             fullWidth={CANVAS_FULL_WIDTH}
             layout="flow"
             loading={item.sourceIndex < EAGER_COUNT ? "eager" : "lazy"}
-            sizes={inPair ? "(min-width: 1024px) 50vw, 100vw" : "100vw"}
+            sizes={
+              inPair
+                ? `(min-width: 1024px) ${Math.ceil(pairShare * 100)}vw, 100vw`
+                : "100vw"
+            }
             className="project-detail-images-default__img"
           />
         </button>
@@ -198,31 +196,23 @@ export function ProjectDetailImagesDefault({
       className={cn("project-detail-images-default", className)}
       aria-label="Ảnh dự án"
     >
-      {rows.map((row) =>
-        row.kind === "pair" ? (
-          <div
-            key={`pair-${row.items[0].sourceIndex}`}
-            className="project-detail-images-default__pair-row"
-          >
-            {/* Nền mờ cả hàng: nửa trái ảnh 1, nửa phải ảnh 2 */}
-            <Backdrop srcs={[row.items[0].src, row.items[1].src]} />
-            <div
-              className="project-detail-images-default__pair"
-              style={
-                {
-                  "--pd-pair-ratio":
-                    (row.items[0].ratio ?? 0.75) + (row.items[1].ratio ?? 0.75),
-                } as CSSProperties
-              }
-            >
-              {renderFigure(row.items[0], true)}
-              {renderFigure(row.items[1], true)}
-            </div>
-          </div>
-        ) : (
-          renderFigure(row.items[0], false)
-        ),
-      )}
+      {/* Mỗi hàng = 1 khung cao đúng 1 màn (desktop), ảnh căn giữa theo chiều dọc
+          → khi đang xem hàng này, hàng khác không ló vào. */}
+      {rows.map((row) => (
+        <div
+          key={`${row.kind}-${row.items[0].sourceIndex}`}
+          className={cn(
+            "project-detail-images-default__row",
+            row.kind === "pair" && "project-detail-images-default__row--pair",
+          )}
+        >
+          {row.kind === "pair"
+            ? row.items.map((item) =>
+                renderFigure(item, pairShareOf(row.items, item)),
+              )
+            : renderFigure(row.items[0])}
+        </div>
+      ))}
 
       <ProjectDetailLightbox
         images={lightboxImages}

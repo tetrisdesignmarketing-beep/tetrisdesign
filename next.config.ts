@@ -86,6 +86,18 @@ const nextConfig: NextConfig = {
     // Safari hay báo navigation transferSize=0 → Next reload document mãi (GET /)
     reactDebugChannel: false,
   },
+  /* Domain thật là tetrisdesign.vn. Địa chỉ *.vercel.app (production + preview)
+     vẫn truy cập được → chặn Google index để không trùng nội dung với domain
+     thật (SEO). Chỉ thêm header, không chặn người dùng truy cập. */
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "(?<vercelHost>.+)\\.vercel\\.app" }],
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+      },
+    ];
+  },
   async redirects() {
     return [
       {

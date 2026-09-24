@@ -2284,17 +2284,15 @@ ul:has(.project-card-hover-scale) {
 .project-detail-images-default__item {
   margin: 0;
   width: 100%;
+  /* Khung đúng tỷ lệ ảnh (khi đã biết) → giữ chỗ trước khi tải, ảnh lấp kín
+     khung mà không cắt. Chưa biết tỷ lệ → auto, cao theo ảnh. */
+  aspect-ratio: var(--pd-ratio, auto);
 }
 
 /* Mobile/tablet: bỏ nhóm cặp, trả ảnh về đúng thứ tự admin (order = vị trí gốc). */
 @media (max-width: 1023px) {
-  .project-detail-images-default__pair-row,
-  .project-detail-images-default__pair {
+  .project-detail-images-default__row {
     display: contents;
-  }
-
-  .project-detail-images-default__backdrop {
-    display: none;
   }
 
   .project-detail-images-default__item {
@@ -2306,6 +2304,7 @@ ul:has(.project-card-hover-scale) {
   position: relative;
   display: block;
   width: 100%;
+  height: 100%;
   padding: 0;
   border: 0;
   background: none;
@@ -2324,88 +2323,59 @@ ul:has(.project-card-hover-scale) {
   height: auto;
 }
 
-/* Desktop: mỗi "hàng" = đúng 1 khung màn hình dưới menu (100% rộng trừ lề ×
-   100dvh − header) trên MỌI tỷ lệ màn hình → hàng kế tiếp không ló vào.
-   Ảnh luôn hiện ĐỦ, không cắt (object-fit: contain): ảnh to hết mức trong
-   khung; phần chênh (khi tỷ lệ ảnh khác tỷ lệ khung) được lấp bằng nền mờ
-   của chính ảnh đó → khung luôn trông phủ kín.
-   2 ảnh dọc: sát nhau, cùng chiều cao, rộng theo tỷ lệ thật; cả cặp căn giữa
-   và co lại vừa khung. */
+/* Desktop:
+   - Mỗi hàng là 1 khung cao đúng 1 màn dưới menu, ảnh căn giữa theo chiều dọc
+     → đang xem hàng này thì hàng khác không ló vào (khoảng cách dọc tự giãn).
+   - Ảnh luôn rộng sát lề 28px (hàng ghép: kiểu "justified", mỗi ảnh chiếm phần
+     ngang tỷ lệ với tỷ lệ ảnh → cùng chiều cao, cả hàng phủ kín chiều ngang).
+   - Chiều cao ảnh = min(rộng / tỷ lệ, 1 màn). Ảnh dẹt hơn màn → hiện đủ, không
+     cắt. Ảnh cao hơn màn → chỉ cắt bớt đều phần trên/dưới (cover, căn giữa). */
 @media (min-width: 1024px) {
   .project-detail-images-default {
     --pd-screen-h: calc(100dvh - var(--site-header-total-height));
-    /* Lề 2 bên 28px (= lề header) — ảnh phủ kín phần còn lại. */
-    padding-inline: var(--site-header-pad-inline);
   }
 
-  .project-detail-images-default > .project-detail-images-default__item,
-  .project-detail-images-default__pair-row {
-    position: relative;
-    width: 100%;
-    height: var(--pd-screen-h);
-    overflow: hidden;
-    isolation: isolate;
-  }
-
-  /* Nền mờ phủ kín khung, nằm dưới ảnh chính. scale để giấu mép mờ. */
-  .project-detail-images-default__backdrop {
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    display: flex;
-    pointer-events: none;
-  }
-
-  .project-detail-images-default__backdrop-img {
-    flex: 1 1 0;
-    background-position: center;
-    background-size: cover;
-    background-repeat: no-repeat;
-    filter: blur(40px) saturate(1.05) brightness(0.92);
-    transform: scale(1.2);
-  }
-
-  .project-detail-images-default > .project-detail-images-default__item
-    > .project-detail-images-default__trigger {
-    position: relative;
-    z-index: 1;
-  }
-
-  .project-detail-images-default__pair {
-    position: relative;
-    z-index: 1;
-    height: 100%;
+  .project-detail-images-default__row {
     display: flex;
     align-items: center;
     gap: 1rem;
-    /* Rộng vừa đủ để 2 ảnh cao hết khung; màn hẹp hơn → co theo chiều ngang. */
-    width: min(
-      100%,
-      calc(var(--pd-screen-h) * var(--pd-pair-ratio, 1.5) + 1rem)
-    );
-    margin-inline: auto;
+    width: 100%;
+    min-height: var(--pd-screen-h);
   }
 
-  .project-detail-images-default__pair > .project-detail-images-default__item {
+  .project-detail-images-default__row > .project-detail-images-default__item {
     flex: var(--pd-ratio, 1) 1 0;
     min-width: 0;
-    height: 100%;
+    max-height: var(--pd-screen-h);
+    overflow: hidden;
   }
 
-  .project-detail-images-default__trigger,
   .project-detail-images-default__trigger > span {
-    width: 100%;
-    max-width: 100%;
     height: 100%;
   }
 
   .project-detail-images-default .project-detail-images-default__img {
-    width: 100%;
-    max-width: 100%;
     height: 100%;
-    max-height: none;
-    object-fit: contain;
+    object-fit: cover;
     object-position: center;
+  }
+
+  /* Chưa biết tỷ lệ (chưa đo xong): cao theo ảnh, vẫn chặn 1 màn. */
+  .project-detail-images-default__row
+    > .project-detail-images-default__item:not([style*="--pd-ratio"])
+    .project-detail-images-default__img {
+    height: auto;
+    max-height: var(--pd-screen-h);
+  }
+
+  /* Ảnh dọc đứng riêng (không có hàng đơn kề bên để ghép — hiếm, vd. dự án chỉ
+     có 1 ảnh dọc): kéo sát lề sẽ phải cắt quá nhiều → giữ nguyên ảnh, cao 1
+     màn, căn giữa. */
+  .project-detail-images-default__row
+    > .project-detail-images-default__item--portrait {
+    flex: none;
+    width: min(100%, calc(var(--pd-screen-h) * var(--pd-ratio, 0.75)));
+    margin-inline: auto;
   }
 }
 

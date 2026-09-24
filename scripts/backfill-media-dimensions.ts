@@ -27,7 +27,7 @@ async function readDimensions(url: string) {
 
 function absoluteUrl(url: string) {
   if (/^https?:\/\//i.test(url)) return url;
-  const base = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  const base = process.env.NEXT_PUBLIC_SITE_URL || "https://tetrisdesign.vn";
   return new URL(url, base).toString();
 }
 
