@@ -7,6 +7,19 @@ interface ProjectDetailContentProps {
   className?: string;
 }
 
+/**
+ * Mô tả nhập từ textarea admin giữ nguyên ký tự xuống dòng (\n), nhưng HTML
+ * gộp mọi khoảng trắng/xuống dòng thành 1 dấu cách. Tách theo dòng trống thành
+ * từng đoạn <p>; xuống dòng đơn trong 1 đoạn giữ lại bằng `whitespace-pre-line`.
+ */
+function splitParagraphs(text: string): string[] {
+  return text
+    .replace(/\r\n?/g, "\n")
+    .split(/\n[ \t]*\n/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean);
+}
+
 export function ProjectDetailContent({
   concept,
   address,
@@ -14,6 +27,7 @@ export function ProjectDetailContent({
   className,
 }: ProjectDetailContentProps) {
   const meta = [concept, address].filter(Boolean).join(" | ");
+  const paragraphs = splitParagraphs(description);
 
   return (
     <section
@@ -27,9 +41,13 @@ export function ProjectDetailContent({
           {meta}
         </p>
       ) : null}
-      <p className="mt-6 text-base leading-relaxed text-foreground md:text-lg">
-        {description}
-      </p>
+      <div className="mt-6 space-y-4 text-base leading-relaxed text-foreground md:text-lg">
+        {paragraphs.map((paragraph, index) => (
+          <p key={index} className="whitespace-pre-line">
+            {paragraph}
+          </p>
+        ))}
+      </div>
     </section>
   );
 }

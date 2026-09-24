@@ -45,7 +45,8 @@ export async function generateMetadata({
 
   return createPageMetadata({
     title: project.title,
-    description: project.description,
+    /* Thẻ meta 1 dòng: gộp xuống dòng của mô tả thành dấu cách. */
+    description: project.description?.replace(/\s+/g, " ").trim() || undefined,
     path: `/projects/${project.slug}`,
     image: getProjectCover(project),
   });
