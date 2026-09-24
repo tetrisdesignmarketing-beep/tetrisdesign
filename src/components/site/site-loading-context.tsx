@@ -13,7 +13,10 @@ import {
 import { flushSync } from "react-dom";
 import { useRouter } from "next/navigation";
 import { SiteLoadingRun } from "@/components/site/site-loading-run";
-import { readSiteLoadingDismissMs } from "@/lib/site-loading-timing";
+import {
+  msUntilLoopEnd,
+  readSiteLoadingDismissMs,
+} from "@/lib/site-loading-timing";
 
 export type NavigateWithLoadingOptions = {
   /** Mặc định `true`. Category tabs: `false`. */
@@ -48,13 +51,38 @@ function locationMatchesHref(href: string): boolean {
   return targetQuery === currentQuery;
 }
 
-const ROUTE_LOADING_FAILSAFE_MS = 15_000;
+/** pathname + query hiện tại — mốc để biết đã rời trang cũ chưa. */
+function currentLocationKey(): string {
+  const query = new URLSearchParams(window.location.search).toString();
+  return `${window.location.pathname}?${query}`;
+}
+
+/**
+ * Đã chuyển trang xong: URL khớp link đích, HOẶC đã rời trang cũ (URL khác lúc
+ * bấm). Vế sau xử lý redirect (/posts → /blog), dấu "/" cuối… — trước đây so
+ * khớp chính xác nên kẹt loading tới failsafe 15s đè lên trang đã tải xong.
+ */
+function navigationArrived(pending: PendingNavigation): boolean {
+  return (
+    locationMatchesHref(pending.href) || currentLocationKey() !== pending.from
+  );
+}
+
+type PendingNavigation = { href: string; from: string };
+
+const ROUTE_LOADING_FAILSAFE_MS = 8_000;
+/** Mờ dần khi tắt overlay — khớp `--sl-fade-ms` trong globals.css. */
+const OVERLAY_FADE_MS = 250;
+
+function overlayRoot(): HTMLElement | null {
+  return document.querySelector<HTMLElement>("[data-site-loading-overlay]");
+}
 
 export function SiteLoadingProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<LoadingMode>("timer");
-  const pendingHrefRef = useRef<string | null>(null);
+  const pendingHrefRef = useRef<PendingNavigation | null>(null);
   const dismissTimerRef = useRef<number | null>(null);
   const dismissScheduledRef = useRef(false);
 
@@ -73,14 +101,27 @@ export function SiteLoadingProvider({ children }: { children: ReactNode }) {
     setMode("timer");
   }, [clearDismissTimer]);
 
-  /** Route ready / failsafe: chờ `--sl-dismiss-ms` rồi unmount. */
+  /**
+   * Route ready / failsafe: chờ HẾT VÒNG animation hiện tại (3 khối đã trượt
+   * ra — không cắt giữa chừng; lần đầu = tối thiểu trọn 1 vòng kể từ lúc hiện),
+   * rồi mờ dần overlay và unmount. Không đọc được animation (reduced motion…)
+   * → chờ `--sl-dismiss-ms` như cũ.
+   */
   const hideAfterDismissDelay = useCallback(() => {
     if (dismissScheduledRef.current) return;
     dismissScheduledRef.current = true;
     clearDismissTimer();
-    const root = document.querySelector("[data-site-loading]");
-    const dismissMs = readSiteLoadingDismissMs(root);
-    dismissTimerRef.current = window.setTimeout(hideNow, dismissMs);
+    const root = overlayRoot();
+    const waitMs = msUntilLoopEnd(root) ?? readSiteLoadingDismissMs(root);
+    dismissTimerRef.current = window.setTimeout(() => {
+      const current = overlayRoot();
+      if (!current) {
+        hideNow();
+        return;
+      }
+      current.setAttribute("data-site-loading-leaving", "");
+      dismissTimerRef.current = window.setTimeout(hideNow, OVERLAY_FADE_MS);
+    }, waitMs);
   }, [clearDismissTimer, hideNow]);
 
   const show = useCallback(() => {
@@ -99,7 +140,9 @@ export function SiteLoadingProvider({ children }: { children: ReactNode }) {
       const scroll = options?.scroll ?? true;
       clearDismissTimer();
       dismissScheduledRef.current = false;
-      pendingHrefRef.current = href;
+      pendingHrefRef.current = { href, from: currentLocationKey() };
+      /* Bấm link khác lúc overlay đang mờ dần → hiện lại ngay. */
+      overlayRoot()?.removeAttribute("data-site-loading-leaving");
 
       flushSync(() => {
         setMode("route");
@@ -135,7 +178,7 @@ export function SiteLoadingProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      if (locationMatchesHref(pending)) {
+      if (navigationArrived(pending)) {
         const busy = document.querySelector("main [data-site-loading]");
         if (!busy) {
           finished = true;
@@ -168,6 +211,7 @@ export function SiteLoadingProvider({ children }: { children: ReactNode }) {
         <SiteLoadingRun
           onDone={hideNow}
           dismissOnTimer={mode === "timer"}
+          overlay
         />
       ) : null}
       {children}

@@ -11,6 +11,8 @@ interface SiteLoadingScreenProps {
   autoDismiss?: boolean;
   /** Intro mở web: tự ẩn sau `--sl-intro-ms` (1 vòng animation). */
   intro?: boolean;
+  /** Overlay toàn cục khi chuyển trang (provider) — khác `loading.tsx` của route. */
+  overlay?: boolean;
 }
 
 const loadingVars = {
@@ -31,6 +33,7 @@ export function SiteLoadingScreen({
   rootRef,
   autoDismiss = false,
   intro = false,
+  overlay = false,
 }: SiteLoadingScreenProps) {
   return (
     <div
@@ -38,6 +41,7 @@ export function SiteLoadingScreen({
       data-site-loading
       data-site-loading-autodismiss={autoDismiss ? "" : undefined}
       data-site-loading-intro={intro ? "" : undefined}
+      data-site-loading-overlay={overlay ? "" : undefined}
       role="status"
       aria-live="polite"
       aria-label="Đang tải"

@@ -6,7 +6,9 @@ import { ProgressiveImage } from "@/components/site/progressive-image";
 import type { MediaDimensions } from "@/lib/media-dimensions";
 import {
   CANVAS_FULL_WIDTH,
+  CANVAS_PREVIEW_QUALITY,
   CANVAS_PREVIEW_WIDTH,
+  optimizedImageSrc,
 } from "@/lib/optimized-image-src";
 import { cn } from "@/lib/utils";
 
@@ -64,6 +66,32 @@ function buildRows(items: GalleryItem[]): GalleryRow[] {
   return rows;
 }
 
+/**
+ * Nền mờ desktop: chính ảnh đó (bản preview nhỏ — cùng URL với lớp preview của
+ * ProgressiveImage nên đã có trong cache) phủ kín khung + làm mờ, lấp phần
+ * chênh khi ảnh hiện đủ (contain). Dùng background-image: mobile ẩn bằng
+ * display:none nên không tải thêm.
+ */
+function Backdrop({ srcs }: { srcs: string[] }) {
+  return (
+    <span className="project-detail-images-default__backdrop" aria-hidden>
+      {srcs.map((src, index) => (
+        <span
+          key={`${src}-${index}`}
+          className="project-detail-images-default__backdrop-img"
+          style={{
+            backgroundImage: `url("${optimizedImageSrc(
+              src,
+              CANVAS_PREVIEW_WIDTH,
+              CANVAS_PREVIEW_QUALITY,
+            ).replace(/"/g, "%22")}")`,
+          }}
+        />
+      ))}
+    </span>
+  );
+}
+
 /** Gallery LAYOUTDEFAULT — cursor mắt khi hover, lightbox như LAYOUT1. */
 export function ProjectDetailImagesDefault({
   images,
@@ -100,7 +128,9 @@ export function ProjectDetailImagesDefault({
   const measureRef = useCallback(
     (sourceIndex: number, known: boolean) => (figure: HTMLElement | null) => {
       if (!figure || known) return;
-      const img = figure.querySelector("img");
+      const img = figure.querySelector<HTMLImageElement>(
+        ".project-detail-images-default__trigger img",
+      );
       if (!img) return;
       const record = () => {
         if (img.naturalWidth > 0 && img.naturalHeight > 0) {
@@ -134,8 +164,14 @@ export function ProjectDetailImagesDefault({
             isPortrait(item) &&
             "project-detail-images-default__item--portrait",
         )}
-        style={{ "--pd-order": item.sourceIndex } as CSSProperties}
+        style={
+          {
+            "--pd-order": item.sourceIndex,
+            ...(inPair && item.ratio ? { "--pd-ratio": item.ratio } : null),
+          } as CSSProperties
+        }
       >
+        {inPair ? null : <Backdrop srcs={[item.src]} />}
         <button
           type="button"
           className="project-detail-images-default__trigger"
@@ -166,10 +202,22 @@ export function ProjectDetailImagesDefault({
         row.kind === "pair" ? (
           <div
             key={`pair-${row.items[0].sourceIndex}`}
-            className="project-detail-images-default__pair"
+            className="project-detail-images-default__pair-row"
           >
-            {renderFigure(row.items[0], true)}
-            {renderFigure(row.items[1], true)}
+            {/* Nền mờ cả hàng: nửa trái ảnh 1, nửa phải ảnh 2 */}
+            <Backdrop srcs={[row.items[0].src, row.items[1].src]} />
+            <div
+              className="project-detail-images-default__pair"
+              style={
+                {
+                  "--pd-pair-ratio":
+                    (row.items[0].ratio ?? 0.75) + (row.items[1].ratio ?? 0.75),
+                } as CSSProperties
+              }
+            >
+              {renderFigure(row.items[0], true)}
+              {renderFigure(row.items[1], true)}
+            </div>
           </div>
         ) : (
           renderFigure(row.items[0], false)

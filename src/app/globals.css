@@ -2288,8 +2288,13 @@ ul:has(.project-card-hover-scale) {
 
 /* Mobile/tablet: bỏ nhóm cặp, trả ảnh về đúng thứ tự admin (order = vị trí gốc). */
 @media (max-width: 1023px) {
+  .project-detail-images-default__pair-row,
   .project-detail-images-default__pair {
     display: contents;
+  }
+
+  .project-detail-images-default__backdrop {
+    display: none;
   }
 
   .project-detail-images-default__item {
@@ -2319,12 +2324,13 @@ ul:has(.project-card-hover-scale) {
   height: auto;
 }
 
-/* Desktop: mỗi "hàng" = đúng 1 khung màn hình dưới menu (100% rộng × 100dvh −
-   header) trên MỌI tỷ lệ màn hình → không còn hàng thấp hơn màn hình để hàng
-   kế tiếp ló vào. Ảnh ngang: 1 ảnh phủ kín khung. 2 ảnh dọc: mỗi ảnh nửa
-   khung, phủ kín. Phủ kín = object-fit: cover (cắt phần dư quanh tâm ảnh khi
-   tỷ lệ ảnh khác tỷ lệ khung). Ảnh dọc lẻ không có cặp: cao đủ khung, giữ
-   nguyên ảnh (contain), căn giữa. */
+/* Desktop: mỗi "hàng" = đúng 1 khung màn hình dưới menu (100% rộng trừ lề ×
+   100dvh − header) trên MỌI tỷ lệ màn hình → hàng kế tiếp không ló vào.
+   Ảnh luôn hiện ĐỦ, không cắt (object-fit: contain): ảnh to hết mức trong
+   khung; phần chênh (khi tỷ lệ ảnh khác tỷ lệ khung) được lấp bằng nền mờ
+   của chính ảnh đó → khung luôn trông phủ kín.
+   2 ảnh dọc: sát nhau, cùng chiều cao, rộng theo tỷ lệ thật; cả cặp căn giữa
+   và co lại vừa khung. */
 @media (min-width: 1024px) {
   .project-detail-images-default {
     --pd-screen-h: calc(100dvh - var(--site-header-total-height));
@@ -2333,18 +2339,55 @@ ul:has(.project-card-hover-scale) {
   }
 
   .project-detail-images-default > .project-detail-images-default__item,
-  .project-detail-images-default__pair {
+  .project-detail-images-default__pair-row {
+    position: relative;
     width: 100%;
     height: var(--pd-screen-h);
+    overflow: hidden;
+    isolation: isolate;
+  }
+
+  /* Nền mờ phủ kín khung, nằm dưới ảnh chính. scale để giấu mép mờ. */
+  .project-detail-images-default__backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    display: flex;
+    pointer-events: none;
+  }
+
+  .project-detail-images-default__backdrop-img {
+    flex: 1 1 0;
+    background-position: center;
+    background-size: cover;
+    background-repeat: no-repeat;
+    filter: blur(40px) saturate(1.05) brightness(0.92);
+    transform: scale(1.2);
+  }
+
+  .project-detail-images-default > .project-detail-images-default__item
+    > .project-detail-images-default__trigger {
+    position: relative;
+    z-index: 1;
   }
 
   .project-detail-images-default__pair {
+    position: relative;
+    z-index: 1;
+    height: 100%;
     display: flex;
+    align-items: center;
     gap: 1rem;
+    /* Rộng vừa đủ để 2 ảnh cao hết khung; màn hẹp hơn → co theo chiều ngang. */
+    width: min(
+      100%,
+      calc(var(--pd-screen-h) * var(--pd-pair-ratio, 1.5) + 1rem)
+    );
+    margin-inline: auto;
   }
 
   .project-detail-images-default__pair > .project-detail-images-default__item {
-    flex: 1 1 0;
+    flex: var(--pd-ratio, 1) 1 0;
     min-width: 0;
     height: 100%;
   }
@@ -2361,13 +2404,8 @@ ul:has(.project-card-hover-scale) {
     max-width: 100%;
     height: 100%;
     max-height: none;
-    object-fit: cover;
-    object-position: center;
-  }
-
-  .project-detail-images-default__item--portrait
-    .project-detail-images-default__img {
     object-fit: contain;
+    object-position: center;
   }
 }
 
@@ -2906,6 +2944,8 @@ html[data-lightbox-open] .site-header {
   --sl-autodismiss-ms: var(--sl-dismiss-ms);
   /* Intro (mở web lần đầu): đúng 1 vòng animation — đủ 3 khối vào, giữ, ra. */
   --sl-intro-ms: var(--sl-loop-ms);
+  /* Mờ dần khi tắt overlay chuyển trang (khớp OVERLAY_FADE_MS). */
+  --sl-fade-ms: 250ms;
   --sl-ease: cubic-bezier(0.22, 1, 0.36, 1);
   position: fixed;
   top: 0;
@@ -2948,6 +2988,35 @@ html[data-lightbox-open] .site-header {
    hiện lại, tránh chớp overlay ở các lần tải sau trước khi React gỡ ra. */
 html[data-intro-done] [data-site-loading-intro] {
   display: none;
+}
+
+/* Chỉ 1 màn loading hiện cùng lúc: đang có overlay (chuyển trang / intro)
+   thì ẩn loading.tsx của route bên trong <main>. Trước đây 2 màn cùng z-index,
+   bắt đầu ở 2 thời điểm khác nhau → animation giật về đầu rồi nhảy nhịp.
+   Chỉ ẩn bằng visibility — phần tử vẫn còn để provider biết route còn đang
+   chờ dữ liệu. */
+html:has([data-site-loading-overlay]) main [data-site-loading],
+html:not([data-intro-done]):has([data-site-loading-intro])
+  main
+  [data-site-loading] {
+  visibility: hidden;
+}
+
+/* Tắt overlay: mờ dần (đã chờ hết vòng nên không còn khối nào đang trượt). */
+[data-site-loading][data-site-loading-leaving] {
+  opacity: 0;
+  transition: opacity var(--sl-fade-ms) ease;
+  pointer-events: none;
+}
+
+/* Trình duyệt chưa có lvh/dvh (iOS < 15.4, WebView Android < 108): biến
+   --site-overlay-h không hợp lệ → chiều cao về 0, nền không phủ, logo lệch.
+   (Không dùng được "khai báo trước làm dự phòng" vì var() lỗi → giá trị initial.) */
+@supports not (height: 100lvh) {
+  [data-site-loading] {
+    height: 100vh;
+    min-height: 100vh;
+  }
 }
 
 @keyframes site-loading-autodismiss {

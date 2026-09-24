@@ -17,12 +17,15 @@ interface SiteLoadingRunProps {
   dismissOnTimer?: boolean;
   /** Intro mở web — ẩn khi CSS kết thúc đúng 1 vòng (`--sl-intro-ms`). */
   intro?: boolean;
+  /** Overlay chuyển trang (provider). */
+  overlay?: boolean;
 }
 
 export function SiteLoadingRun({
   onDone,
   dismissOnTimer = true,
   intro = false,
+  overlay = false,
 }: SiteLoadingRunProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const reducedMotion = usePrefersReducedMotion();
@@ -86,6 +89,7 @@ export function SiteLoadingRun({
       rootRef={rootRef}
       autoDismiss={dismissOnTimer && !reducedMotion}
       intro={intro}
+      overlay={overlay}
     />
   );
 }
