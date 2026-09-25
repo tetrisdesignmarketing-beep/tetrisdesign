@@ -3,6 +3,7 @@ import { siteAbout, siteContact } from "@/lib/site-content";
 import {
   aboutPageSchema,
   contactPageSchema,
+  contactSocialStoredSchema,
   homePageSchema,
   homeSlidesToFormValues,
   servicesPageSchema,
@@ -83,11 +84,14 @@ export function normalizeContactPageContent(
     addressLine,
     province,
   });
+  /* Giữ link mạng xã hội (nếu có) khi dựng lại từ dữ liệu cũ. */
+  const social = contactSocialStoredSchema.safeParse(row.social);
 
   const parsed = contactPageSchema.safeParse({
     email,
     phone,
     ...parts,
+    ...(social.success ? { social: social.data } : null),
   });
   return parsed.success ? parsed.data : null;
 }

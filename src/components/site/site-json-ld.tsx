@@ -1,16 +1,19 @@
 import { getSiteContact } from "@/lib/get-site-contact";
-import { siteBrand, siteSocial } from "@/lib/site-content";
+import { siteBrand } from "@/lib/site-content";
+import { resolveSocialLinks } from "@/lib/social-links";
 import { siteUrl } from "@/lib/site-metadata";
 
 export async function SiteJsonLd() {
   const contact = await getSiteContact();
 
+  /* Trang hồ sơ mạng xã hội (Zalo là link nhắn tin, không phải hồ sơ → bỏ). */
+  const social = resolveSocialLinks(contact);
   const sameAs = [
-    siteSocial.facebook,
-    siteSocial.instagram,
-    siteSocial.tiktok,
-    siteSocial.behance,
-  ].filter(Boolean) as string[];
+    social.facebook,
+    social.instagram,
+    social.tiktok,
+    social.behance,
+  ].filter(Boolean);
 
   const jsonLd = {
     "@context": "https://schema.org",

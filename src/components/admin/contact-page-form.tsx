@@ -8,6 +8,13 @@ import {
   SitePageFormFooter,
 } from "@/components/admin/site-page-form-ui";
 import { composeContactAddress } from "@/lib/contact-address";
+import {
+  normalizeSocialHref,
+  resolveSocialLinks,
+  SOCIAL_KEYS,
+  SOCIAL_LABELS,
+  type SocialKey,
+} from "@/lib/social-links";
 import { putSitePage } from "@/lib/put-site-page";
 import { VN_PROVINCES } from "@/lib/vn-provinces";
 import { Input } from "@/components/ui/input";
@@ -19,6 +26,14 @@ import {
   type ContactPageFormValues,
 } from "@/lib/validations/site-page";
 import { cn } from "@/lib/utils";
+
+const SOCIAL_PLACEHOLDERS: Record<SocialKey, string> = {
+  facebook: "facebook.com/Tetrisvietnam",
+  instagram: "instagram.com/tetris.interior",
+  tiktok: "tiktok.com/@tetrisdesignn",
+  behance: "behance.net/tentaikhoan",
+  zalo: "0969 873 396 hoặc https://zalo.me/…",
+};
 
 export function ContactPageForm({
   initialData,
@@ -33,6 +48,7 @@ export function ContactPageForm({
     register,
     control,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<ContactPageFormValues>({
     resolver: zodResolver(contactPageFormSchema),
@@ -41,6 +57,8 @@ export function ContactPageForm({
       phone: initialData.phone,
       addressLine: initialData.addressLine,
       province: initialData.province,
+      /* Chưa lưu lần nào → điền sẵn link mặc định đang hiện trên footer. */
+      social: resolveSocialLinks(initialData),
     },
   });
 
@@ -118,6 +136,49 @@ export function ContactPageForm({
           trả phí.
         </p>
       </div>
+
+      <fieldset className="space-y-4 rounded-md border px-4 py-4">
+        <legend className="px-1 text-sm font-medium">Mạng xã hội (footer)</legend>
+        <p className="text-muted-foreground text-xs">
+          Để trống ô nào thì icon đó ẩn khỏi footer. Thiếu{" "}
+          <code>https://</code> sẽ tự thêm.
+        </p>
+        {SOCIAL_KEYS.map((key) => (
+          <div key={key} className="space-y-2">
+            <Label htmlFor={`contact-social-${key}`}>
+              {SOCIAL_LABELS[key]}
+            </Label>
+            <Input
+              id={`contact-social-${key}`}
+              inputMode={key === "zalo" ? "text" : "url"}
+              autoComplete="off"
+              placeholder={SOCIAL_PLACEHOLDERS[key]}
+              {...register(`social.${key}`, {
+                onBlur: (event) => {
+                  const normalized = normalizeSocialHref(
+                    key,
+                    event.target.value,
+                  );
+                  /* Chỉ thay khi hợp lệ — sai thì giữ nguyên để báo lỗi. */
+                  if (normalized || !event.target.value.trim()) {
+                    setValue(`social.${key}`, normalized, {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    });
+                  }
+                },
+              })}
+            />
+            {key === "zalo" ? (
+              <p className="text-muted-foreground text-xs">
+                Nhập số điện thoại (vd. 0969 873 396) → tự tạo link
+                https://zalo.me/…, hoặc dán link Zalo đầy đủ.
+              </p>
+            ) : null}
+            <FieldError message={errors.social?.[key]?.message} />
+          </div>
+        ))}
+      </fieldset>
 
       {previewAddress ? (
         <div className="bg-muted/40 space-y-1 rounded-md border px-3 py-2">

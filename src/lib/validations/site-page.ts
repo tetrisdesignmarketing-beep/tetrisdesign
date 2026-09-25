@@ -2,6 +2,11 @@ import { z } from "zod";
 import { VN_PROVINCES } from "@/lib/vn-provinces";
 import { mediaPathSchema } from "@/lib/validations/shared";
 import { isValidPartnerHref, normalizePartnerHref } from "@/lib/partner-href";
+import {
+  isValidSocialHref,
+  normalizeSocialHref,
+  type SocialKey,
+} from "@/lib/social-links";
 
 export const SITE_PAGE_SLUGS = [
   "home",
@@ -142,6 +147,44 @@ const vnProvinceField = z.enum(VN_PROVINCES, {
   error: "Chọn tỉnh / thành phố",
 });
 
+/** Form admin — luôn là string (input = output cho RHF + zodResolver). */
+function socialHrefFormField(key: SocialKey) {
+  return z
+    .string()
+    .max(2048)
+    .refine((value) => isValidSocialHref(key, value), {
+      message:
+        key === "zalo"
+          ? "Nhập số điện thoại hoặc link Zalo hợp lệ"
+          : "Link không hợp lệ (vd. facebook.com/tentrang)",
+    });
+}
+
+/** Lưu DB — chuẩn hoá lại phía server; thiếu/sai → "" (ẩn icon). */
+function socialHrefStoredField(key: SocialKey) {
+  return z
+    .string()
+    .max(2048)
+    .optional()
+    .transform((value) => normalizeSocialHref(key, value));
+}
+
+export const contactSocialFormSchema = z.object({
+  facebook: socialHrefFormField("facebook"),
+  instagram: socialHrefFormField("instagram"),
+  tiktok: socialHrefFormField("tiktok"),
+  behance: socialHrefFormField("behance"),
+  zalo: socialHrefFormField("zalo"),
+});
+
+const contactSocialStoredSchema = z.object({
+  facebook: socialHrefStoredField("facebook"),
+  instagram: socialHrefStoredField("instagram"),
+  tiktok: socialHrefStoredField("tiktok"),
+  behance: socialHrefStoredField("behance"),
+  zalo: socialHrefStoredField("zalo"),
+});
+
 /** Form admin — chưa ghép `address` (ghép lúc submit). */
 export const contactPageFormSchema = z.object({
   email: z.email("Email không hợp lệ"),
@@ -151,12 +194,21 @@ export const contactPageFormSchema = z.object({
     .min(1, "Địa chỉ chi tiết không được để trống")
     .max(400, "Địa chỉ chi tiết tối đa 400 ký tự"),
   province: vnProvinceField,
+  /** Link icon mạng xã hội ở footer — ô trống = ẩn icon. */
+  social: contactSocialFormSchema,
 });
 
-/** Lưu DB + public — có `address` đã ghép (line + tỉnh + Việt Nam). */
+/**
+ * Lưu DB + public — có `address` đã ghép (line + tỉnh + Việt Nam).
+ * `social` optional: dữ liệu lưu trước khi có tính năng này không có trường
+ * này → site dùng link mặc định (xem resolveSocialLinks).
+ */
 export const contactPageSchema = contactPageFormSchema.extend({
   address: z.string().min(1, "Địa chỉ không được để trống").max(500),
+  social: contactSocialStoredSchema.optional(),
 });
+
+export { contactSocialStoredSchema };
 
 /** Layout /projects — list dự án nằm ở Post, không lưu trong JSON này. */
 export const projectsPageSchema = z.object({
