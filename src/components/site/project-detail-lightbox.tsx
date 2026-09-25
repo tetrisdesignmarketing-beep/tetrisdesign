@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ChevronLeft, ChevronRight, EyeOff } from "lucide-react";
+import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { ProgressiveImage } from "@/components/site/progressive-image";
 import {
   CANVAS_FULL_WIDTH,
@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 
 const SWIPE_MIN_PX = 48;
 /** iOS ghost-click sau unmount — giữ khóa header để khỏi mở menu. */
-const HEADER_LOCK_AFTER_CLOSE_MS = 400;
+const HEADER_LOCK_AFTER_CLOSE_MS = 600;
 
 interface ProjectDetailLightboxProps {
   images: string[];
@@ -158,7 +158,7 @@ export function ProjectDetailLightbox({
         onClick={handleClose}
         aria-label="Đóng"
       >
-        <EyeOff className="h-5 w-5" strokeWidth={1.75} />
+        <X className="h-5 w-5" strokeWidth={1.75} />
       </Button>
 
       {images.length > 1 ? (

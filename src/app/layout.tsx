@@ -9,7 +9,7 @@ import "./globals.css";
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
-  /* Chỉ là fallback sau Gilroy — preload thì tải về mà không dùng */
+  /* Chỉ là fallback sau Helvetica Neue — preload thì tải về mà không dùng */
   preload: false,
 });
 
@@ -84,7 +84,14 @@ export default function RootLayout({
         />
         <link
           rel="preload"
-          href="/fonts/Gilroy-Regular.woff2"
+          href="/fonts/HelveticaNeue-Regular.woff2"
+          as="font"
+          type="font/woff2"
+          crossOrigin="anonymous"
+        />
+        <link
+          rel="preload"
+          href="/fonts/HelveticaNeue-Medium.woff2"
           as="font"
           type="font/woff2"
           crossOrigin="anonymous"

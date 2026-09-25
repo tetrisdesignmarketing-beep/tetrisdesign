@@ -13,7 +13,7 @@
   --secondary: #f5f5f5;
   --secondary-foreground: var(--brand-black);
   --muted: #f5f5f5;
-  --muted-foreground: #737373;
+  --muted-foreground: var(--brand-black);
   --accent: #f5f5f5;
   --accent-foreground: var(--brand-black);
   --destructive: #ef4444;
@@ -23,7 +23,7 @@
   --ring: var(--brand-black);
   --radius: 0.5rem;
   --logo-default-font: "Fashion Didot W90 Regular", serif;
-  --font-ui: "Gilroy", var(--font-geist-sans), sans-serif;
+  --font-ui: "Helvetica Neue", var(--font-geist-sans), sans-serif;
   /* Label chung (menu, tiêu đề/tên dự án ở lưới home…) — đổi 1 chỗ, áp mọi
      nơi dùng. Trang khác: dùng class .site-label-text hoặc 2 biến này. */
   --site-label-font-size: 0.875rem;
@@ -60,12 +60,12 @@
     var(--site-footer-height) + var(--site-footer-safe-bottom)
   );
   --site-urlbar-bottom: 0px;
-  /* Thang z: menu panel < header < lightbox < overlay loading.
+  /* Thang z: menu panel < header < overlay loading < lightbox.
      Số lớn vì iOS có thể sơn layer scroll (carousel) lên trên z thấp. */
   --site-menu-panel-z: 9000;
   --site-header-z: 9010;
-  --site-lightbox-z: 9990;
   --site-loading-z: 10000;
+  --site-lightbox-z: 10010;
   /* Overlay (loading) có thể cao hơn 1 màn — không dùng cho hero in-flow */
   --site-overlay-h: max(
     100lvh,
@@ -307,6 +307,18 @@ a.contact-info-value:hover {
   touch-action: manipulation;
   pointer-events: auto;
   -webkit-tap-highlight-color: transparent;
+  outline: none;
+}
+
+/* Tap / focus() programmatic: không viền Safari. Tab bàn phím: giữ ring. */
+.site-header-menu-toggle:focus:not(:focus-visible) {
+  outline: none;
+  box-shadow: none;
+}
+
+.site-header-menu-toggle:focus-visible {
+  outline: 2px solid var(--brand-black);
+  outline-offset: 2px;
 }
 
 .site-header-menu-toggle > span:not(.sr-only) {
@@ -388,48 +400,40 @@ html:has(#site-mobile-menu:target) .site-header-menu-toggle > span:not(.sr-only)
 }
 
 @font-face {
-  font-family: "Gilroy";
-  src: url("/fonts/Gilroy-Regular.woff2") format("woff2");
+  font-family: "Helvetica Neue";
+  src: url("/fonts/HelveticaNeue-Regular.woff2") format("woff2");
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: "Gilroy";
-  src: url("/fonts/Gilroy-Medium.woff2") format("woff2");
+  font-family: "Helvetica Neue";
+  src: url("/fonts/HelveticaNeue-Medium.woff2") format("woff2");
   font-weight: 500;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: "Gilroy";
-  src: url("/fonts/Gilroy-SemiBold.woff2") format("woff2");
-  font-weight: 600;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Gilroy";
-  src: url("/fonts/Gilroy-Bold.woff2") format("woff2");
+  font-family: "Helvetica Neue";
+  src: url("/fonts/HelveticaNeue-Bold.woff2") format("woff2");
   font-weight: 700;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: "Gilroy";
-  src: url("/fonts/Gilroy-Italic.woff2") format("woff2");
+  font-family: "Helvetica Neue";
+  src: url("/fonts/HelveticaNeue-Italic.woff2") format("woff2");
   font-weight: 400;
   font-style: italic;
   font-display: swap;
 }
 
 @font-face {
-  font-family: "Gilroy";
-  src: url("/fonts/Gilroy-BoldItalic.woff2") format("woff2");
+  font-family: "Helvetica Neue";
+  src: url("/fonts/HelveticaNeue-BoldItalic.woff2") format("woff2");
   font-weight: 700;
   font-style: italic;
   font-display: swap;
@@ -2562,7 +2566,7 @@ ul:has(.project-card-hover-scale) {
 .project-detail-lightbox {
   position: fixed;
   inset: 0;
-  /* Dưới loading, trên header/menu — --site-lightbox-z */
+  /* Trên header/menu/loading — --site-lightbox-z */
   z-index: var(--site-lightbox-z);
   display: grid;
   place-items: center;
@@ -2570,8 +2574,10 @@ ul:has(.project-card-hover-scale) {
   color: #fff;
 }
 
-/* Khi lightbox mở: khóa tương tác header — tránh click close lọt xuống nút menu */
-html[data-lightbox-open] .site-header {
+/* Khi lightbox mở: khóa header + toggle (toggle tự `pointer-events: auto`
+   nên chỉ khóa parent không đủ; fallback toạ độ menu cũng đọc cờ này). */
+html[data-lightbox-open] .site-header,
+html[data-lightbox-open] .site-header-menu-toggle {
   pointer-events: none;
 }
 
@@ -2635,14 +2641,6 @@ html[data-lightbox-open] .site-header {
   }
 }
 
-@media (max-width: 1023px) {
-  .project-detail-lightbox__close {
-    top: auto;
-    bottom: max(1.25rem, env(safe-area-inset-bottom));
-    right: var(--site-header-pad-inline);
-  }
-}
-
 .project-detail-lightbox__nav--prev {
   top: 50%;
   left: max(0.5rem, env(safe-area-inset-left));
@@ -2703,7 +2701,7 @@ html[data-lightbox-open] .site-header {
   align-content: center;
   justify-content: center;
   overflow: hidden;
-  /* Cùng kiểu chữ label menu: Gilroy, cỡ/độ đậm site-label-text, chữ hoa,
+  /* Cùng kiểu chữ label menu: Helvetica Neue, cỡ/độ đậm site-label-text, chữ hoa,
      khoảng cách chữ như menu (mobile 0.25em, desktop lg+ 0.2em). */
   font-family: var(--font-ui);
   font-size: var(--site-label-font-size);

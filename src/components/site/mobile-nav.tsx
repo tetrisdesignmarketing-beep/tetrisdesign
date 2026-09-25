@@ -156,6 +156,8 @@ export function MobileNav({
      nhận event nên menu mở được ở mọi browser. */
   useEffect(() => {
     const toggleFromPoint = (x: number, y: number) => {
+      /* Lightbox close trùng góc hamburger — không mở menu khi đang khóa header. */
+      if (document.documentElement.hasAttribute("data-lightbox-open")) return;
       const closed = phaseRef.current === "closed";
       const target = closed ? toggleRef.current : closeToggleRef.current;
       if (!isPointInsideNode(target, x, y)) return;
