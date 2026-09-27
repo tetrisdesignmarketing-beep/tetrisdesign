@@ -23,7 +23,7 @@
   --ring: var(--brand-black);
   --radius: 0.5rem;
   --logo-default-font: "Fashion Didot W90 Regular", serif;
-  --font-ui: "Helvetica Neue", var(--font-geist-sans), sans-serif;
+  --font-ui: "Ganh", var(--font-geist-sans), sans-serif;
   /* Label chung (menu, tiêu đề/tên dự án ở lưới home…) — đổi 1 chỗ, áp mọi
      nơi dùng. Trang khác: dùng class .site-label-text hoặc 2 biến này. */
   --site-label-font-size: 0.875rem;
@@ -399,41 +399,59 @@ html:has(#site-mobile-menu:target) .site-header-menu-toggle > span:not(.sr-only)
   font-display: swap;
 }
 
+/* Ganh tạm thay Helvetica Neue. Bộ nguồn chỉ có Thin 100 và Regular 400.
+   500/700 trỏ cùng file Regular để label và bold không bị faux-bold. */
 @font-face {
-  font-family: "Helvetica Neue";
-  src: url("/fonts/HelveticaNeue-Regular.woff2") format("woff2");
+  font-family: "Ganh";
+  src: url("/fonts/Ganh-Thin.woff2") format("woff2");
+  font-weight: 100;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Ganh";
+  src: url("/fonts/Ganh-ThinItalic.woff2") format("woff2");
+  font-weight: 100;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Ganh";
+  src: url("/fonts/Ganh-Regular.woff2") format("woff2");
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: "Helvetica Neue";
-  src: url("/fonts/HelveticaNeue-Medium.woff2") format("woff2");
+  font-family: "Ganh";
+  src: url("/fonts/Ganh-Regular.woff2") format("woff2");
   font-weight: 500;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: "Helvetica Neue";
-  src: url("/fonts/HelveticaNeue-Bold.woff2") format("woff2");
+  font-family: "Ganh";
+  src: url("/fonts/Ganh-Regular.woff2") format("woff2");
   font-weight: 700;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: "Helvetica Neue";
-  src: url("/fonts/HelveticaNeue-Italic.woff2") format("woff2");
+  font-family: "Ganh";
+  src: url("/fonts/Ganh-Italic.woff2") format("woff2");
   font-weight: 400;
   font-style: italic;
   font-display: swap;
 }
 
 @font-face {
-  font-family: "Helvetica Neue";
-  src: url("/fonts/HelveticaNeue-BoldItalic.woff2") format("woff2");
+  font-family: "Ganh";
+  src: url("/fonts/Ganh-Italic.woff2") format("woff2");
   font-weight: 700;
   font-style: italic;
   font-display: swap;
@@ -2701,7 +2719,7 @@ html[data-lightbox-open] .site-header-menu-toggle {
   align-content: center;
   justify-content: center;
   overflow: hidden;
-  /* Cùng kiểu chữ label menu: Helvetica Neue, cỡ/độ đậm site-label-text, chữ hoa,
+  /* Cùng kiểu chữ label menu: Ganh, cỡ/độ đậm site-label-text, chữ hoa,
      khoảng cách chữ như menu (mobile 0.25em, desktop lg+ 0.2em). */
   font-family: var(--font-ui);
   font-size: var(--site-label-font-size);
