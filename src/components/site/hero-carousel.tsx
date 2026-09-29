@@ -24,6 +24,8 @@ interface HeroCarouselProps {
   projectsAnchorId?: string;
 }
 
+/** Thời gian mỗi slide hiển thị trước khi tự chuyển. */
+const AUTOPLAY_MS = 6000;
 const WHEEL_COOLDOWN_MS = 420;
 /** Debounce ngắn khi browser chưa có scrollend — tránh flicker giữa 2 slide. */
 const SCROLL_INDEX_DEBOUNCE_MS = 50;
@@ -180,14 +182,16 @@ export function HeroCarousel({
     };
   }, [slides.length]);
 
+  /* Mỗi slide hiển thị đủ AUTOPLAY_MS rồi mới chuyển: đếm lại từ đầu mỗi khi
+     đổi slide (kể cả người xem tự vuốt/bấm) → không nhảy sớm sau thao tác tay. */
   useEffect(() => {
     if (slides.length <= 1 || !isHeroActive) return;
     if (isHovered && canHoverPauseAutoplay()) return;
-    const timer = window.setInterval(() => {
+    const timer = window.setTimeout(() => {
       goToRef.current(activeIndexRef.current + 1);
-    }, 3000);
-    return () => window.clearInterval(timer);
-  }, [slides.length, isHovered, isHeroActive]);
+    }, AUTOPLAY_MS);
+    return () => window.clearTimeout(timer);
+  }, [slides.length, isHovered, isHeroActive, activeIndex]);
 
   useEffect(() => {
     const section = sectionRef.current;

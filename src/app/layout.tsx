@@ -9,7 +9,7 @@ import "./globals.css";
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
-  /* Chỉ là fallback sau Ganh — preload thì tải về mà không dùng */
+  /* Chỉ là fallback sau Neue Einstellung — preload thì tải về mà không dùng */
   preload: false,
 });
 
@@ -82,9 +82,17 @@ export default function RootLayout({
           type="font/woff2"
           crossOrigin="anonymous"
         />
+        {/* Chữ thường (400) + menu/label (500) đều hiện ngay khi mở trang. */}
         <link
           rel="preload"
-          href="/fonts/Ganh-Regular.woff2"
+          href="/fonts/NeueEinstellung-Regular.woff2"
+          as="font"
+          type="font/woff2"
+          crossOrigin="anonymous"
+        />
+        <link
+          rel="preload"
+          href="/fonts/NeueEinstellung-Medium.woff2"
           as="font"
           type="font/woff2"
           crossOrigin="anonymous"

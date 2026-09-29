@@ -189,6 +189,11 @@ const contactSocialStoredSchema = z.object({
 export const contactPageFormSchema = z.object({
   email: z.email("Email không hợp lệ"),
   phone: z.string().min(1, "Số điện thoại không được để trống").max(50),
+  /** Mã số thuế — để trống thì ẩn trên trang Liên hệ. 10 số, hoặc 10 số + "-" + 3 số (chi nhánh). */
+  taxCode: z
+    .string()
+    .trim()
+    .regex(/^(\d{10}(-\d{3})?)?$/, "Mã số thuế gồm 10 số (hoặc 10 số-3 số)"),
   addressLine: z
     .string()
     .min(1, "Địa chỉ chi tiết không được để trống")
@@ -205,6 +210,8 @@ export const contactPageFormSchema = z.object({
  */
 export const contactPageSchema = contactPageFormSchema.extend({
   address: z.string().min(1, "Địa chỉ không được để trống").max(500),
+  /* Dữ liệu cũ chưa có → dùng mã số thuế mặc định (xem resolveContactTaxCode). */
+  taxCode: z.string().trim().max(50).optional(),
   social: contactSocialStoredSchema.optional(),
 });
 

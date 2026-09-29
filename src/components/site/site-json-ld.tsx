@@ -1,5 +1,6 @@
 import { getSiteContact } from "@/lib/get-site-contact";
 import { siteBrand } from "@/lib/site-content";
+import { resolveContactTaxCode } from "@/lib/site-page-defaults";
 import { resolveSocialLinks } from "@/lib/social-links";
 import { siteUrl } from "@/lib/site-metadata";
 
@@ -22,6 +23,9 @@ export async function SiteJsonLd() {
     url: siteUrl,
     email: contact.email,
     telephone: contact.phone,
+    ...(resolveContactTaxCode(contact)
+      ? { taxID: resolveContactTaxCode(contact) }
+      : null),
     address: {
       "@type": "PostalAddress",
       streetAddress: contact.address,

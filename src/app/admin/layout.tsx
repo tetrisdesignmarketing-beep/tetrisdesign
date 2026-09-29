@@ -20,7 +20,7 @@ export default async function AdminLayout({
 
   return (
     <MediaDrawerProvider>
-      <div className="min-h-screen bg-muted/30">
+      <div className="min-h-screen bg-muted/30 font-normal">
         <header className="sticky top-0 z-50 border-b bg-background">
           <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4">
             <div className="flex min-w-0 items-center gap-6">

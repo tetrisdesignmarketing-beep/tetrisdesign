@@ -16,7 +16,7 @@ export const siteBrand = {
   },
   fonts: {
     logoDefaultFont: "Fashion Didot W90 Regular",
-    ui: "Ganh",
+    ui: "Neue Einstellung",
   },
 } as const;
 
@@ -33,6 +33,8 @@ export const siteAdminLoginHref = "/admin/login";
 export const siteContact = {
   email: "tetrisdesign.mng@gmail.com",
   phone: "+84 969 873 396",
+  /** Mã số thuế — mặc định khi CMS Liên hệ chưa lưu trường này. */
+  taxCode: "0109843375",
   address: "Số 31 Ngõ 135 Đội Cấn, Ba Đình, Hanoi, Vietnam",
   mapsQuery: "31/135 Đội Cấn, Ba Đình, Hanoi, Vietnam",
   /** Trung tâm map — single source of truth (OSM marker / Maps JS) */

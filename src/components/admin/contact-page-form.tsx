@@ -16,6 +16,7 @@ import {
   type SocialKey,
 } from "@/lib/social-links";
 import { putSitePage } from "@/lib/put-site-page";
+import { resolveContactTaxCode } from "@/lib/site-page-defaults";
 import { VN_PROVINCES } from "@/lib/vn-provinces";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -55,6 +56,7 @@ export function ContactPageForm({
     defaultValues: {
       email: initialData.email,
       phone: initialData.phone,
+      taxCode: resolveContactTaxCode(initialData),
       addressLine: initialData.addressLine,
       province: initialData.province,
       /* Chưa lưu lần nào → điền sẵn link mặc định đang hiện trên footer. */
@@ -99,6 +101,21 @@ export function ContactPageForm({
         <Label htmlFor="contact-phone">Số điện thoại</Label>
         <Input id="contact-phone" {...register("phone")} />
         <FieldError message={errors.phone?.message} />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="contact-tax-code">Mã số thuế</Label>
+        <Input
+          id="contact-tax-code"
+          inputMode="numeric"
+          autoComplete="off"
+          placeholder="0109843375"
+          {...register("taxCode")}
+        />
+        <FieldError message={errors.taxCode?.message} />
+        <p className="text-muted-foreground text-xs">
+          Hiển thị ở trang Liên hệ. Để trống thì ẩn mục này.
+        </p>
       </div>
 
       <div className="space-y-2">

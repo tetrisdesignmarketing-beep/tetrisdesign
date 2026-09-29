@@ -47,6 +47,7 @@ export function getSitePageFallback(
       return contactPageSchema.parse({
         email: siteContact.email,
         phone: siteContact.phone,
+        taxCode: siteContact.taxCode,
         ...parts,
       });
     }
@@ -87,9 +88,12 @@ export function normalizeContactPageContent(
   /* Giữ link mạng xã hội (nếu có) khi dựng lại từ dữ liệu cũ. */
   const social = contactSocialStoredSchema.safeParse(row.social);
 
+  const taxCode = typeof row.taxCode === "string" ? row.taxCode : undefined;
+
   const parsed = contactPageSchema.safeParse({
     email,
     phone,
+    ...(taxCode !== undefined ? { taxCode } : null),
     ...parts,
     ...(social.success ? { social: social.data } : null),
   });
@@ -136,4 +140,12 @@ export function resolveSitePageContent(
       );
     }
   }
+}
+
+/**
+ * Mã số thuế hiển thị: CMS chưa từng lưu trường này (dữ liệu cũ) → mặc định
+ * trong code; đã lưu → đúng theo admin (chuỗi rỗng = ẩn).
+ */
+export function resolveContactTaxCode(contact: { taxCode?: string }): string {
+  return (contact.taxCode ?? siteContact.taxCode).trim();
 }

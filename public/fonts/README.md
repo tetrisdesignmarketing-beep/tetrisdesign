@@ -4,18 +4,17 @@
 
 | Font | File |
 |------|------|
-| Fashion Didot W90 Regular | `FashionDidotW90-Regular.woff2` |
-| Ganh (Thin 100) — UI tạm | `Ganh-Thin.woff2` |
-| Ganh (Thin Italic 100) | `Ganh-ThinItalic.woff2` |
-| Ganh (Regular 400; CSS cũng gán 500 và 700) | `Ganh-Regular.woff2` |
-| Ganh (Italic 400) | `Ganh-Italic.woff2` |
+| Fashion Didot W90 Regular (logo) | `FashionDidotW90-Regular.woff2` |
+| Neue Einstellung Regular 400 — chữ thường | `NeueEinstellung-Regular.woff2` |
+| Neue Einstellung Medium 500 — label, menu | `NeueEinstellung-Medium.woff2` |
+| Neue Einstellung Bold 700 | `NeueEinstellung-Bold.woff2` |
 
-Helvetica Neue (`HelveticaNeue-*.woff2`) vẫn nằm trong thư mục để đổi lại. UI đang dùng Ganh.
+UI đang dùng Neue Einstellung (Hanken Design Co. — cần Web Font License cho
+domain). Bộ gốc có đủ 9 độ đậm; chỉ đóng gói 400/500/700.
+
+Font cũ vẫn để lại để đổi lại nếu cần: Gotham (`Gotham-*.woff2`),
+Ganh (`Ganh-*.woff2`), Helvetica Neue (`HelveticaNeue-*.woff2`).
 
 Đường dẫn trong CSS: `/fonts/{filename}` — xem `@font-face` trong `src/app/globals.css`.
 
-Preload trong `src/app/layout.tsx`:
-
-```tsx
-<link rel="preload" href="/fonts/Ganh-Regular.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
-```
+Preload trong `src/app/layout.tsx`: `NeueEinstellung-Regular.woff2` và `NeueEinstellung-Medium.woff2`.
