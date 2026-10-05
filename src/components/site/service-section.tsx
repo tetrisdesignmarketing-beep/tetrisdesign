@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { SiteFooter } from "@/components/site/site-footer";
 import { ProgressiveImage } from "@/components/site/progressive-image";
 import { useSectionEnterOnce } from "@/hooks/use-section-enter-once";
@@ -33,6 +33,8 @@ const PLAY_FAILSAFE_MS = 1200;
 /** Khớp `focus-in-expand` — lớp nét chỉ gắn sau khi enter xong. */
 const ENTER_SETTLE_MS = 800;
 
+const subscribeNoop = () => () => {};
+
 function shouldSkipEnterAnimation(): boolean {
   if (typeof window === "undefined") return false;
   return (
@@ -56,16 +58,20 @@ export function ServiceSection({
   contact,
 }: ServiceSectionProps) {
   const entered = useSectionEnterOnce(sectionId);
-  const [play, setPlay] = useState(false);
-  const [enterSettled, setEnterSettled] = useState(false);
+  const [playState, setPlay] = useState(false);
+  const [enterSettledState, setEnterSettled] = useState(false);
+  /* Reduced-motion / cảm ứng / mobile: bỏ animation vào — suy ra khi render
+     (server = false) thay vì setState đồng bộ trong effect. */
+  const skipEnter = useSyncExternalStore(
+    subscribeNoop,
+    shouldSkipEnterAnimation,
+    () => false,
+  );
+  const play = playState || skipEnter;
+  const enterSettled = enterSettledState || skipEnter;
 
   useEffect(() => {
     if (play) return;
-
-    if (shouldSkipEnterAnimation()) {
-      setPlay(true);
-      return;
-    }
 
     const failsafe = window.setTimeout(() => setPlay(true), PLAY_FAILSAFE_MS);
 
@@ -86,14 +92,10 @@ export function ServiceSection({
   }, [entered, play]);
 
   useEffect(() => {
-    if (!play) return;
-    if (shouldSkipEnterAnimation()) {
-      setEnterSettled(true);
-      return;
-    }
+    if (!play || skipEnter) return;
     const id = window.setTimeout(() => setEnterSettled(true), ENTER_SETTLE_MS);
     return () => window.clearTimeout(id);
-  }, [play]);
+  }, [play, skipEnter]);
 
   return (
     <section

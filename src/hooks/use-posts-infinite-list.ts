@@ -84,6 +84,7 @@ export function usePostsInfiniteList(
   }, [loadPage]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- tải dữ liệu lần đầu (loadPage bật loading đồng bộ)
     void loadPage(null, "replace");
   }, [loadPage]);
 

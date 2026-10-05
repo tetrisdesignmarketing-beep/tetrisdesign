@@ -14,7 +14,9 @@ import {
   downloadMediaObject,
   isIncomingPath,
   moveMediaObject,
+  mediaVariantPaths,
   removeMediaObjects,
+  storeMediaVariants,
   uploadMediaObject,
 } from "@/lib/media-storage";
 import { prisma } from "@/lib/prisma";
@@ -83,6 +85,8 @@ export async function POST(request: Request) {
     let finalSize: number;
     let finalWidth: number | null = null;
     let finalHeight: number | null = null;
+    /* Bytes ảnh đã lưu — để tạo ảnh mờ LQIP sau khi có media.id. */
+    let storedImageBuffer: Buffer | null = null;
 
     if (OPTIMIZABLE_MIME.has(mimeType)) {
       const { optimizeImageForUpload } = await import("@/lib/optimize-image");
@@ -132,6 +136,10 @@ export async function POST(request: Request) {
         finalMime = mimeType;
         finalSize = originalBuffer.length;
       }
+
+      /* Bản thu nhỏ cho srcset (lỗi → site dùng ảnh gốc, không chặn upload). */
+      storedImageBuffer = optimized.optimized ? optimized.buffer : originalBuffer;
+      await storeMediaVariants(finalPath, storedImageBuffer);
     } else {
       // SVG / video — không kéo bytes qua Function.
       finalPath = buildStoredPath(filename);
@@ -154,12 +162,22 @@ export async function POST(request: Request) {
         type: mediaType,
       },
     });
-    const { saveMediaDimensions } = await import("@/lib/media-dimensions");
+    const { saveMediaDimensions, saveMediaPlaceholder } = await import(
+      "@/lib/media-dimensions"
+    );
     await saveMediaDimensions(
       media.id,
       finalWidth ?? undefined,
       finalHeight ?? undefined,
     );
+    if (storedImageBuffer && mediaType === "image") {
+      /* Ảnh mờ LQIP — khung ảnh trên site không bao giờ trống. */
+      const { generateMediaPlaceholder } = await import("@/lib/optimize-image");
+      await saveMediaPlaceholder(
+        media.id,
+        await generateMediaPlaceholder(storedImageBuffer),
+      );
+    }
 
     return NextResponse.json(media, { status: 201 });
   } catch (err) {
@@ -167,6 +185,7 @@ export async function POST(request: Request) {
     const cleanup = [incomingPath, storedPath].filter(
       (p): p is string => Boolean(p),
     );
+    if (storedPath) cleanup.push(...mediaVariantPaths(storedPath));
     if (cleanup.length > 0) {
       try {
         await removeMediaObjects(cleanup);

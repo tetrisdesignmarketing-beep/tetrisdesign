@@ -53,11 +53,13 @@ function SiteHeaderInner({ pathname }: { pathname: string }) {
         className={cn(
           "site-header pointer-events-auto fixed top-0 w-full motion-reduce:transition-none",
           !lightChrome &&
-            "transition-[background-color,backdrop-filter] duration-300",
+            "transition-[background-color] duration-300",
           menuActive
             ? "bg-background"
             : solidHeader
-              ? "bg-background/95 backdrop-blur-sm"
+              /* Nền đục, không backdrop-blur: blur phía sau header phải vẽ
+                 lại mỗi khung hình cuộn — rất tốn trên điện thoại. */
+              ? "bg-background"
               : null,
         )}
       >

@@ -4,6 +4,11 @@ import {
   getStorageBucket,
 } from "@/lib/supabase";
 import { sanitizeFilename } from "@/lib/media";
+import {
+  MEDIA_VARIANT_WIDTHS,
+  canHaveMediaVariants,
+  mediaVariantPath,
+} from "@/lib/media-variants";
 
 /** Temp objects uploaded by the browser before server finalize. */
 export const MEDIA_INCOMING_PREFIX = "incoming/";
@@ -94,4 +99,49 @@ export async function removeMediaObjects(paths: string[]) {
   const supabase = createSupabaseAdmin();
   const bucket = getStorageBucket();
   await supabase.storage.from(bucket).remove(paths);
+}
+
+/**
+ * Tạo + lưu bản thu nhỏ cạnh file gốc (tên cố định, xem media-variants.ts).
+ * Không bao giờ ném lỗi: thiếu bản thu nhỏ thì site tự rơi về ảnh gốc.
+ * @returns số bản đã lưu
+ */
+export async function storeMediaVariants(
+  path: string,
+  buffer: Buffer,
+): Promise<number> {
+  if (!canHaveMediaVariants(path)) return 0;
+  try {
+    const { generateMediaVariants } = await import("@/lib/optimize-image");
+    const variants = await generateMediaVariants(buffer);
+    if (variants.length === 0) return 0;
+    const supabase = createSupabaseAdmin();
+    const bucket = getStorageBucket();
+    let stored = 0;
+    for (const variant of variants) {
+      const { error } = await supabase.storage
+        .from(bucket)
+        .upload(mediaVariantPath(path, variant.width), variant.buffer, {
+          contentType: "image/webp",
+          /* Tên có timestamp của file gốc → nội dung không đổi → cache lâu. */
+          cacheControl: "31536000",
+          upsert: true,
+        });
+      if (error) {
+        console.error("Store media variant failed:", path, variant.width, error);
+      } else {
+        stored += 1;
+      }
+    }
+    return stored;
+  } catch (err) {
+    console.error("Store media variants failed:", path, err);
+    return 0;
+  }
+}
+
+/** Đường dẫn mọi bản thu nhỏ của 1 file (để xoá kèm file gốc). */
+export function mediaVariantPaths(path: string): string[] {
+  if (!canHaveMediaVariants(path)) return [];
+  return MEDIA_VARIANT_WIDTHS.map((width) => mediaVariantPath(path, width));
 }

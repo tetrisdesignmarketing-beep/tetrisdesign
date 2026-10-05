@@ -11,6 +11,14 @@ export const metadata = createPageMetadata({
   path: "/contact",
 });
 
+/**
+ * Lưu sẵn trang (ISR): phục vụ bản dựng sẵn từ CDN. Admin lưu → API gọi
+ * `revalidateSite()` nên lượt xem kế tiếp đã có nội dung mới. 3600s = lưới
+ * an toàn: nếu 1 lần dựng gặp lỗi DB (trả dữ liệu dự phòng) thì tự dựng lại
+ * sau tối đa 1 giờ.
+ */
+export const revalidate = 3600;
+
 export default async function ContactPage() {
   const contact = await getSiteContact();
 

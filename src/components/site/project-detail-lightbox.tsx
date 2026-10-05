@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useIsClient } from "@/hooks/use-is-client";
 import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { ProgressiveImage } from "@/components/site/progressive-image";
@@ -29,19 +30,23 @@ export function ProjectDetailLightbox({
   onClose,
 }: ProjectDetailLightboxProps) {
   const open = index !== null && images.length > 0;
-  const [current, setCurrent] = useState(0);
-  const [mounted, setMounted] = useState(false);
+  const wrapIndex = (value: number) =>
+    ((value % images.length) + images.length) % images.length;
+  const [current, setCurrent] = useState(() =>
+    index === null || images.length === 0 ? 0 : wrapIndex(index),
+  );
+  const mounted = useIsClient();
   const touchStartX = useRef<number | null>(null);
   const headerLockTimerRef = useRef<number | null>(null);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (index === null) return;
-    setCurrent(((index % images.length) + images.length) % images.length);
-  }, [index, images.length]);
+  /* Mở ở ảnh khác / đổi danh sách → nhảy tới ảnh được bấm (chỉnh state ngay
+     trong render thay vì setState trong effect). */
+  const openKey = `${index}\u0001${images.length}`;
+  const [prevOpenKey, setPrevOpenKey] = useState(openKey);
+  if (prevOpenKey !== openKey) {
+    setPrevOpenKey(openKey);
+    if (index !== null && images.length > 0) setCurrent(wrapIndex(index));
+  }
 
   const goTo = useCallback(
     (next: number) => {

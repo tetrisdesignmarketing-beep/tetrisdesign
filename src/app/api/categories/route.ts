@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidateSite } from "@/lib/revalidate-site";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { categorySchema } from "@/lib/validations/category";
@@ -53,6 +54,7 @@ export async function POST(request: Request) {
     const category = await prisma.category.create({
       data: parsed.data,
     });
+    revalidateSite();
     return NextResponse.json(category, { status: 201 });
   } catch (err) {
     console.error("Create category error:", err);

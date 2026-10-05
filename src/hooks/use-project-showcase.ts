@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { SiteProject } from "@/lib/site-content";
 
 /** Số dự án mỗi lần hiện thêm trên `/projects`. */
@@ -53,9 +53,13 @@ export function useProjectShowcase({
     setVisibleCount((count) => Math.min(count + pageSize, total));
   }, [pageSize, total]);
 
-  useEffect(() => {
+  /* Đổi danh sách / từ khoá → hiện lại từ trang đầu (chỉnh state trong render). */
+  const resetKey = `${listKey}\u0001${pageSize}\u0001${query}`;
+  const [prevResetKey, setPrevResetKey] = useState(resetKey);
+  if (prevResetKey !== resetKey) {
+    setPrevResetKey(resetKey);
     setVisibleCount(pageSize);
-  }, [listKey, pageSize, query]);
+  }
 
   return {
     visible,

@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import {
   getSitePageFallback,
@@ -10,7 +11,8 @@ import type { ContactPageContent } from "@/lib/validations/site-page";
  * Chưa có row / JSON lệch / DB lỗi → fallback từ `siteContact`.
  * Map iframe / pin link derive từ `address` đã ghép (Phase B).
  */
-export async function getSiteContact(): Promise<ContactPageContent> {
+/* React `cache`: layout (JSON-LD) + page cùng gọi trong 1 lần dựng trang → 1 query. */
+export const getSiteContact = cache(async (): Promise<ContactPageContent> => {
   try {
     const row = await prisma.sitePage.findUnique({
       where: { slug: "contact" },
@@ -24,4 +26,4 @@ export async function getSiteContact(): Promise<ContactPageContent> {
   }
 
   return getSitePageFallback("contact");
-}
+});

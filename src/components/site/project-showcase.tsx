@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useRef } from "react";
+import { Suspense, useEffect, useLayoutEffect, useRef } from "react";
 import { HomeProjectCurtainList } from "@/components/site/home-project-curtain-list";
 import { ProjectDetailRelated } from "@/components/site/project-detail-related";
 import { ProjectFilter } from "@/components/site/project-filter";
@@ -143,7 +143,10 @@ function ProjectInfiniteSentinel({
   const ref = useRef<HTMLDivElement>(null);
   const onLoadMoreRef = useRef(onLoadMore);
   const requestedCount = useRef(-1);
-  onLoadMoreRef.current = onLoadMore;
+  /* Giữ callback mới nhất cho effect/timer — gán sau commit, không gán trong render. */
+  useLayoutEffect(() => {
+    onLoadMoreRef.current = onLoadMore;
+  });
 
   useEffect(() => {
     const el = ref.current;
@@ -160,7 +163,8 @@ function ProjectInfiniteSentinel({
         observer.disconnect();
         onLoadMoreRef.current();
       },
-      { root: null, rootMargin: "240px 0px" },
+      /* Tải thêm khi còn cách cuối ~1 màn hình → không khựng khi gần đáy. */
+      { root: null, rootMargin: "100% 0px" },
     );
     observer.observe(el);
 

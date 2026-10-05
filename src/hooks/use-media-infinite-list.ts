@@ -78,6 +78,7 @@ export function useMediaInfiniteList(options: {
   useEffect(() => {
     if (!enabled) {
       requestIdRef.current += 1;
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset danh sách khi tắt — đồng bộ với request đang chạy (requestIdRef)
       setMedia([]);
       setNextCursor(null);
       setError(null);

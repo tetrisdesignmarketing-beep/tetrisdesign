@@ -24,8 +24,13 @@ interface UseSectionGestureOptions {
 }
 
 const INNER_SCROLL_GESTURE_PX = 2;
-/** Room tối thiểu mới được coi là “có cuộn” / chặn rubber-band */
-const MIN_SCROLL_ROOM_PX = 64;
+/**
+ * Khoảng lặng giữa 2 sự kiện wheel để coi là 1 cú cuộn MỚI. Trackpad/đà quán
+ * tính bắn wheel liên tục (~16ms) → cả đà là 1 cú: cuộn hết nội dung trong
+ * màn rồi thì phải dừng tay và cuộn tiếp mới sang màn sau (không trượt màn
+ * vì đuôi quán tính).
+ */
+const WHEEL_GESTURE_GAP_MS = 180;
 
 function isPartnersHorizontalTouch(target: EventTarget | null): boolean {
   if (!(target instanceof Element)) return false;
@@ -75,30 +80,6 @@ function resolveInnerScroll(
 }
 
 /** Chặn rubber-band chỉ khi thật sự ở đáy nội dung có room cuộn. */
-function shouldBlockOverscroll(innerEl: HTMLElement): boolean {
-  const maxScroll = innerEl.scrollHeight - innerEl.clientHeight;
-  if (maxScroll < MIN_SCROLL_ROOM_PX) return false;
-
-  const live = measureInnerScroll(innerEl);
-  if (!live.isAtBottom) return false;
-
-  /* Brand-break: gần đỉnh hoặc logo chưa rest → không bao giờ preventDefault */
-  const brand = innerEl.querySelector("[data-brand-break]");
-  if (brand instanceof HTMLElement) {
-    if (brand.getAttribute("data-brand-break-logo") !== "rest") return false;
-    if (innerEl.scrollTop < MIN_SCROLL_ROOM_PX) return false;
-  }
-
-  return true;
-}
-
-function preferNativeInnerScroll(): boolean {
-  return (
-    window.matchMedia("(pointer: coarse)").matches ||
-    window.matchMedia("(max-width: 767px)").matches
-  );
-}
-
 export function useSectionGesture({
   pager,
   enabled: _enabled,
@@ -109,7 +90,9 @@ export function useSectionGesture({
   const swipeAxisRef = useRef<SwipeAxis>(null);
   const innerScrollStartTopRef = useRef<number | null>(null);
   const innerEdgeStartRef = useRef<InnerScrollSnapshot | null>(null);
-  const innerTakeoverRef = useRef(false);
+  const lastWheelAtRef = useRef(0);
+  /* Cú cuộn hiện tại đã cuộn nội dung trong màn / đã đổi màn chưa. */
+  const wheelGestureRef = useRef({ scrolledInner: false, paged: false });
 
   useLayoutEffect(() => {
     pagerRef.current = pager;
@@ -124,7 +107,6 @@ export function useSectionGesture({
       swipeAxisRef.current = null;
       innerScrollStartTopRef.current = null;
       innerEdgeStartRef.current = null;
-      innerTakeoverRef.current = false;
     };
 
     const onTouchStart = (event: TouchEvent) => {
@@ -168,55 +150,11 @@ export function useSectionGesture({
         swipeAxisRef.current = absX >= absY ? "horizontal" : "vertical";
       }
 
-      const innerEl = resolveInnerScroll(event.target, pagerRef.current);
-      const startTop = innerScrollStartTopRef.current;
-      /* Mobile/coarse: một máy = native inner scroll. Không takeover, không
-         preventDefault giữa chừng (cắt momentum → giật/kẹt morph-pin). */
-      const nativeOnly = preferNativeInnerScroll();
-
-      if (
-        !nativeOnly &&
-        innerEl &&
-        startTop !== null &&
-        swipeAxisRef.current === "vertical" &&
-        absY >= SECTION_AXIS_LOCK_MIN
-      ) {
-        const nativeMoved = Math.abs(innerEl.scrollTop - startTop) > 2;
-        const goingDown = deltaY < 0;
-        const goingUp = deltaY > 0;
-        const live = measureInnerScroll(innerEl);
-        const maxScroll = innerEl.scrollHeight - innerEl.clientHeight;
-        const hasRoom = maxScroll >= MIN_SCROLL_ROOM_PX;
-        /* Chỉ takeover khi native không cuộn — đừng force (đánh nhau → giật). */
-        if (
-          !innerTakeoverRef.current &&
-          !nativeMoved &&
-          hasRoom &&
-          ((goingDown && !live.isAtBottom) || (goingUp && !live.isAtTop))
-        ) {
-          innerTakeoverRef.current = true;
-        }
-        if (innerTakeoverRef.current) {
-          const nextTop = Math.max(
-            0,
-            Math.min(maxScroll, startTop - deltaY),
-          );
-          innerEl.scrollTop = nextTop;
-          if (event.cancelable) event.preventDefault();
-          return;
-        }
-      }
-
-      if (
-        !nativeOnly &&
-        innerEl &&
-        deltaY < 0 &&
-        absY >= SECTION_AXIS_LOCK_MIN &&
-        shouldBlockOverscroll(innerEl) &&
-        event.cancelable
-      ) {
-        event.preventDefault();
-      }
+      /*
+       * Cuộn trong màn luôn để trình duyệt tự làm (native, có quán tính) —
+       * không gán scrollTop, không preventDefault. Chỉ đổi màn ở touchend khi
+       * nội dung đã chạm đáy/đỉnh (xem finishTouch).
+       */
     };
 
     const finishTouch = (event: TouchEvent) => {
@@ -279,26 +217,39 @@ export function useSectionGesture({
 
     const onWheel = (event: WheelEvent) => {
       if (isInfiniteCanvasGesture(event.target)) return;
+      const now = performance.now();
+      if (now - lastWheelAtRef.current >= WHEEL_GESTURE_GAP_MS) {
+        wheelGestureRef.current = { scrolledInner: false, paged: false };
+      }
+      lastWheelAtRef.current = now;
+      const gesture = wheelGestureRef.current;
+
       const p = pagerRef.current;
       if (p.isTransitioning) return;
-      if (Math.abs(event.deltaY) < FPS_WHEEL_NOTCH_MIN) return;
 
       const section = p.sections[p.currentIndex];
       const innerScrollEl = resolveInnerScroll(event.target, p);
       const inner = p.syncInnerScrollFromDom(p.currentIndex);
 
       if (section && section.mode === "scrollable" && innerScrollEl && inner) {
-        if (event.deltaY > 0 && !inner.isAtBottom) {
-          innerScrollEl.scrollTop += event.deltaY;
-          p.syncInnerScrollFromDom(p.currentIndex);
-          return;
-        }
-        if (event.deltaY < 0 && !inner.isAtTop) {
-          innerScrollEl.scrollTop += event.deltaY;
-          p.syncInnerScrollFromDom(p.currentIndex);
+        const hasRoom =
+          (event.deltaY > 0 && !inner.isAtBottom) ||
+          (event.deltaY < 0 && !inner.isAtTop);
+        if (hasRoom) {
+          /* Con trỏ nằm trong khung cuộn → trình duyệt tự cuộn (native,
+             listener passive). Chỉ tự cuộn hộ khi con trỏ ở ngoài khung. */
+          const insideScroller =
+            event.target instanceof Node && innerScrollEl.contains(event.target);
+          if (!insideScroller) innerScrollEl.scrollTop += event.deltaY;
+          gesture.scrolledInner = true;
           return;
         }
       }
+
+      if (Math.abs(event.deltaY) < FPS_WHEEL_NOTCH_MIN) return;
+      /* Mỗi cú cuộn chỉ đổi 1 màn; cú vừa cuộn hết nội dung thì không đổi. */
+      if (gesture.paged || gesture.scrolledInner) return;
+      gesture.paged = true;
 
       if (event.deltaY > 0) {
         p.goNext();
@@ -312,9 +263,10 @@ export function useSectionGesture({
       capture: true,
       passive: true,
     });
+    /* passive: không còn preventDefault → trình duyệt cuộn trên compositor. */
     document.addEventListener("touchmove", onTouchMove, {
       capture: true,
-      passive: false,
+      passive: true,
     });
     document.addEventListener("touchend", finishTouch, {
       capture: true,

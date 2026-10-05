@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidateSite } from "@/lib/revalidate-site";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { postFeaturedPatchSchema, postSchema } from "@/lib/validations/post";
@@ -65,6 +66,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       data: { featured: parsed.data.featured },
     });
 
+    revalidateSite();
     return NextResponse.json(post);
   } catch (err) {
     console.error("Toggle post featured error:", err);
@@ -167,6 +169,7 @@ export async function PUT(request: Request, context: RouteContext) {
       },
     });
 
+    revalidateSite();
     return NextResponse.json(post);
   } catch (err) {
     console.error("Update post error:", err);
@@ -191,6 +194,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
     }
 
     await prisma.post.delete({ where: { id } });
+    revalidateSite();
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json(

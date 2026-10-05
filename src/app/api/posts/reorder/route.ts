@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidateSite } from "@/lib/revalidate-site";
 import { Prisma } from "@prisma/client";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
@@ -73,6 +74,7 @@ export async function PATCH(request: Request) {
       `;
     }
 
+    revalidateSite();
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("Reorder posts error:", err);

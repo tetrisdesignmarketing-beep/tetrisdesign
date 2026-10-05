@@ -29,7 +29,6 @@ export function AboutHero({ src, alt, className }: AboutHeroProps) {
         fullWidth={CANVAS_FULL_WIDTH}
         fullResponsive
         /* THỬ NGHIỆM tạm: chất lượng 30 để kiểm tra giật có do ảnh — xoá khi test xong */
-        fullQuality={30}
         hidePreviewWhenFull
         priority
         className="object-contain p-4 grayscale md:p-8"

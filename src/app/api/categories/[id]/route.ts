@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidateSite } from "@/lib/revalidate-site";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { categorySchema } from "@/lib/validations/category";
@@ -69,6 +70,7 @@ export async function PUT(request: Request, context: RouteContext) {
       where: { id },
       data: parsed.data,
     });
+    revalidateSite();
     return NextResponse.json(category);
   } catch (err) {
     console.error("Update category error:", err);
@@ -103,6 +105,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
     }
 
     await prisma.category.delete({ where: { id } });
+    revalidateSite();
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json(

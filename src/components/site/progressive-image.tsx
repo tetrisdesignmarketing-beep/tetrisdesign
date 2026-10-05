@@ -8,6 +8,14 @@ import {
   CANVAS_PREVIEW_QUALITY,
   optimizedImageSrc,
 } from "@/lib/optimized-image-src";
+import {
+  MEDIA_VARIANT_FALLBACK_WIDTH,
+  hasMediaVariants,
+  mediaVariantSrcSet,
+  mediaVariantUrl,
+  pickMediaVariantWidthAtMost,
+} from "@/lib/media-variants";
+import { useMediaPlaceholder } from "@/components/site/media-placeholders";
 import { isSvgSrc } from "@/lib/site-image";
 import { cn } from "@/lib/utils";
 
@@ -46,8 +54,13 @@ type ProgressiveImageProps = {
    * `loadFull` turns off — avoids soft→sharp flash on revisit (hero slider).
    */
   persistFull?: boolean;
-  /** High priority on the preview request (LCP). */
+  /** High priority on the preview request (LCP). Cũng bật `eagerFull`. */
   priority?: boolean;
+  /**
+   * Tải lớp nét song song lớp xem trước thay vì chờ xem trước xong (ảnh đầu
+   * trang / LCP). Mặc định = `priority`.
+   */
+  eagerFull?: boolean;
   /** Crossfade the sharp layer. Off when a parent already animates opacity. */
   fade?: boolean;
   /** `fill` = absolute crop. `flow` = preview sets height, sharp overlays. */
@@ -56,6 +69,10 @@ type ProgressiveImageProps = {
   className?: string;
   sizes?: string;
 };
+
+/** Vùng đệm tải trước cho ảnh lazy (theo chiều dọc, % chiều cao viewport). */
+const PREVIEW_PRELOAD_MARGIN = "200% 0px";
+const FULL_PRELOAD_MARGIN = "100% 0px";
 
 function isImgDecoded(img: HTMLImageElement | null) {
   return Boolean(img?.complete && img.naturalWidth > 0);
@@ -75,6 +92,7 @@ export function ProgressiveImage({
   loadFull = true,
   persistFull = false,
   priority = false,
+  eagerFull,
   fade = true,
   layout = "fill",
   loading = "eager",
@@ -83,14 +101,31 @@ export function ProgressiveImage({
 }: ProgressiveImageProps) {
   const reduced = usePrefersReducedMotion();
   const original = src.trim();
-  const previewTarget = optimizedImageSrc(
+  /* Ảnh mờ LQIP (nếu trang cung cấp qua MediaPlaceholdersProvider). */
+  const placeholder = useMediaPlaceholder(original);
+  /*
+   * Ảnh trong Supabase Storage có bộ bản thu nhỏ tạo sẵn lúc upload
+   * (media-variants.ts): xem trước = bản nhỏ, lớp nét = srcset theo `sizes`
+   * → không tải file gốc 3840px, không tốn Vercel Image Optimization.
+   * Bản thu nhỏ thiếu (ảnh cũ chưa backfill) → onError rơi về cách cũ.
+   */
+  const variants = hasMediaVariants(original);
+  const optimizerPreview = optimizedImageSrc(
     original,
     previewWidth,
     previewQuality,
   );
-  const fullTarget = fullUseOriginal
-    ? original
-    : optimizedImageSrc(original, fullWidth, fullQuality);
+  const previewTarget = variants
+    ? mediaVariantUrl(original, pickMediaVariantWidthAtMost(previewWidth))
+    : optimizerPreview;
+  const variantFull = variants
+    ? mediaVariantUrl(original, MEDIA_VARIANT_FALLBACK_WIDTH)
+    : null;
+  const fullTarget =
+    variantFull ??
+    (fullUseOriginal
+      ? original
+      : optimizedImageSrc(original, fullWidth, fullQuality));
   const [previewSrc, setPreviewSrc] = useState(previewTarget);
   const [fullSrc, setFullSrc] = useState(fullTarget);
   const [previewReady, setPreviewReady] = useState(false);
@@ -125,16 +160,60 @@ export function ProgressiveImage({
       ? optimizedImageSrc(original, fullWidth, fullQuality)
       : null;
   const fullSrcSet =
-    responsiveFull && responsiveFull !== original && fullSrc === original
-      ? `${responsiveFull} ${fullWidth}w, ${original} 4096w`
-      : undefined;
+    variantFull && fullSrc === variantFull
+      ? mediaVariantSrcSet(original)
+      : responsiveFull && responsiveFull !== original && fullSrc === original
+        ? `${responsiveFull} ${fullWidth}w, ${original} 4096w`
+        : undefined;
 
-  const wantFull = loadFull || (persistFull && fullReady);
-  const showFull = wantFull && previewReady && previewSrc !== fullSrc;
-
+  /*
+   * Tải trước theo hướng cuộn (ảnh `loading="lazy"`): IntersectionObserver
+   * với vùng đệm lớn hơn ngưỡng lazy của trình duyệt (vốn chỉ ~1 ảnh cao cỡ
+   * màn hình). Xem trước (nhẹ) bắt đầu khi còn cách ~2 màn, lớp nét khi còn
+   * cách ~1 màn — cuộn nhanh không gặp khung chưa tải. Áp cả khi cuộn lên.
+   */
+  const lazy = loading === "lazy";
+  const [nearPreview, setNearPreview] = useState(false);
+  const [nearFull, setNearFull] = useState(false);
   useEffect(() => {
+    if (!lazy) return;
+    const target = previewRef.current;
+    if (!target || typeof IntersectionObserver === "undefined") return;
+    const observe = (margin: string, onNear: () => void) => {
+      const observer = new IntersectionObserver(
+        (entries) => {
+          if (!entries.some((entry) => entry.isIntersecting)) return;
+          onNear();
+          observer.disconnect();
+        },
+        { rootMargin: margin },
+      );
+      observer.observe(target);
+      return observer;
+    };
+    const previewObserver = observe(PREVIEW_PRELOAD_MARGIN, () =>
+      setNearPreview(true),
+    );
+    const fullObserver = observe(FULL_PRELOAD_MARGIN, () => setNearFull(true));
+    return () => {
+      previewObserver.disconnect();
+      fullObserver.disconnect();
+    };
+  }, [lazy]);
+  const previewLoading = lazy && !nearPreview ? "lazy" : "eager";
+
+  const startFullEarly = eagerFull ?? priority;
+  const wantFull =
+    (loadFull && (!lazy || nearFull)) || (persistFull && fullReady);
+  const showFull =
+    wantFull && (previewReady || startFullEarly) && previewSrc !== fullSrc;
+
+  /* Lớp nét bị gỡ (không persist) → lần gắn lại phải chờ onLoad mới hiện. */
+  const [prevShowFull, setPrevShowFull] = useState(showFull);
+  if (prevShowFull !== showFull) {
+    setPrevShowFull(showFull);
     if (!showFull && !persistFull) setFullReady(false);
-  }, [showFull, persistFull]);
+  }
 
   /* Cache/LCP: onLoad có thể không chạy nếu img đã complete trước khi gắn handler. */
   useEffect(() => {
@@ -180,6 +259,27 @@ export function ProgressiveImage({
   const fullLayer =
     layout === "flow" ? "absolute inset-0 !h-full !w-full" : layer;
 
+  /*
+   * Lớp ảnh mờ nằm dưới cùng, chỉ tồn tại tới khi ảnh xem trước hiện → không
+   * thêm lớp phải vẽ lúc cuộn / morph. Dùng cùng className với ảnh (padding,
+   * grayscale, ẩn/hiện theo breakpoint) và khớp object-contain/cover.
+   */
+  const placeholderLayer =
+    placeholder && !previewReady ? (
+      <span
+        aria-hidden
+        data-progressive-placeholder=""
+        className={cn(
+          "pointer-events-none absolute inset-0 block bg-center bg-no-repeat [background-clip:content-box] [background-origin:content-box]",
+          /\bobject-contain\b/.test(className ?? "") ? "bg-contain" : "bg-cover",
+          className,
+        )}
+        style={{
+          backgroundImage: `url("${placeholder.replace(/"/g, "%22")}")`,
+        }}
+      />
+    ) : null;
+
   const preview = loadPreview ? (
     <img
       ref={previewRef}
@@ -188,11 +288,16 @@ export function ProgressiveImage({
       aria-hidden={fullReady || undefined}
       draggable={false}
       decoding="async"
-      loading={loading}
+      loading={previewLoading}
       fetchPriority={priority ? "high" : "auto"}
       onLoad={() => setPreviewReady(true)}
       onError={() => {
-        if (previewSrc !== original) setPreviewSrc(original);
+        /* Bản thu nhỏ thiếu → optimizer → ảnh gốc. */
+        if (previewSrc !== optimizerPreview && previewSrc !== original) {
+          setPreviewSrc(optimizerPreview);
+        } else if (previewSrc !== original) {
+          setPreviewSrc(original);
+        }
       }}
       className={cn(layer, className, previewHidden && "invisible")}
     />
@@ -204,6 +309,7 @@ export function ProgressiveImage({
       srcSet={fullSrcSet}
       sizes={fullSrcSet ? sizes : undefined}
       data-progressive-full=""
+      fetchPriority={priority ? "high" : undefined}
       alt={fullReady ? alt : ""}
       aria-hidden={fullReady ? undefined : true}
       draggable={false}
@@ -225,6 +331,7 @@ export function ProgressiveImage({
   if (layout === "flow") {
     return (
       <span className="relative block w-full">
+        {placeholderLayer}
         {preview}
         {full}
       </span>
@@ -233,6 +340,7 @@ export function ProgressiveImage({
 
   return (
     <>
+      {placeholderLayer}
       {preview}
       {full}
     </>

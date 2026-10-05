@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Providers } from "@/components/providers";
-import { DEV_CLIENT_PROBE } from "@/lib/dev-client-probe";
 import { siteBrand } from "@/lib/site-content";
 import { siteUrl } from "@/lib/site-metadata";
 import "./globals.css";
@@ -69,12 +69,6 @@ export default function RootLayout({
               "try{if(sessionStorage.getItem('site-loading-intro-done')==='1')document.documentElement.setAttribute('data-intro-done','')}catch(e){}",
           }}
         />
-        {process.env.NODE_ENV === "production" ? null : (
-          <script
-            id="site-dev-probe"
-            dangerouslySetInnerHTML={{ __html: DEV_CLIENT_PROBE }}
-          />
-        )}
         <link
           rel="preload"
           href="/fonts/FashionDidotW90-Regular.woff2"
@@ -100,6 +94,8 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col">
         <Providers>{children}</Providers>
+        {/* Đo Core Web Vitals trên người dùng thật (Vercel → Speed Insights). */}
+        <SpeedInsights />
       </body>
     </html>
   );

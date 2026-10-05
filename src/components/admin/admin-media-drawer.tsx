@@ -127,6 +127,7 @@ export function AdminMediaDrawer() {
 
   useEffect(() => {
     if (open) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset khi đóng drawer, kèm revokeObjectURL (side effect) — không làm được trong render
     setPending((items) => {
       revokeAll(items);
       return [];
@@ -141,6 +142,7 @@ export function AdminMediaDrawer() {
 
   useEffect(() => {
     if (!open || pickMode !== "multiple") return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- đồng bộ lựa chọn từ prop mỗi lần mở drawer
     setPickerSelection(selectedUrls);
   }, [open, pickMode, selectedUrls]);
 

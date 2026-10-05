@@ -235,6 +235,7 @@ export function MobileNav({
 
   useEffect(() => {
     if (!open && phase !== "closed" && phase !== "closing") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- đồng bộ phase khi bị đóng từ ngoài, kèm gọi callback cha (không gọi được trong render)
       setPhase("closed");
       onClosingChange?.(false);
     }

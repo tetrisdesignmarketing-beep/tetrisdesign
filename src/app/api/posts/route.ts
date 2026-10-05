@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidateSite } from "@/lib/revalidate-site";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { postQuerySchema, postSchema } from "@/lib/validations/post";
@@ -165,6 +166,7 @@ export async function POST(request: Request) {
       },
     });
 
+    revalidateSite();
     return NextResponse.json(post, { status: 201 });
   } catch (err) {
     console.error("Create post error:", err);

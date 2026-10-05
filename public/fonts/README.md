@@ -12,8 +12,8 @@
 UI đang dùng Neue Einstellung (Hanken Design Co. — cần Web Font License cho
 domain). Bộ gốc có đủ 9 độ đậm; chỉ đóng gói 400/500/700.
 
-Font cũ vẫn để lại để đổi lại nếu cần: Gotham (`Gotham-*.woff2`),
-Ganh (`Ganh-*.woff2`), Helvetica Neue (`HelveticaNeue-*.woff2`).
+Font cũ (Gotham, Ganh, Helvetica Neue) đã xoá khỏi thư mục — cần đổi lại thì
+lấy từ lịch sử git.
 
 Đường dẫn trong CSS: `/fonts/{filename}` — xem `@font-face` trong `src/app/globals.css`.
 

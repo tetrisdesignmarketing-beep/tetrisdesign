@@ -2,7 +2,9 @@ import { Suspense } from "react";
 import { ProjectFilter } from "@/components/site/project-filter";
 import { ProjectsCategoryProvider } from "@/components/site/projects-category-context";
 import { ProjectsPageScroll } from "@/components/site/projects-page-scroll";
+import { MediaPlaceholdersProvider } from "@/components/site/media-placeholders";
 import { SiteLoadingScreen } from "@/components/site/site-loading-screen";
+import { getMediaPlaceholders } from "@/lib/media-dimensions";
 import { getSiteContact } from "@/lib/get-site-contact";
 import { getSiteProjects } from "@/lib/get-site-projects";
 import { createPageMetadata } from "@/lib/site-metadata";
@@ -15,8 +17,13 @@ export const metadata = createPageMetadata({
   path: "/projects",
 });
 
-/** CMS bài đăng đổi là thấy ngay — không cache list. */
-export const dynamic = "force-dynamic";
+/**
+ * Lưu sẵn trang (ISR): phục vụ bản dựng sẵn từ CDN. Admin lưu → API gọi
+ * `revalidateSite()` nên lượt xem kế tiếp đã có nội dung mới. 3600s = lưới
+ * an toàn: nếu 1 lần dựng gặp lỗi DB (trả dữ liệu dự phòng) thì tự dựng lại
+ * sau tối đa 1 giờ.
+ */
+export const revalidate = 3600;
 
 /**
  * Fetch TOÀN BỘ dự án (mọi category) đúng 1 lần lúc vào trang.
@@ -26,7 +33,15 @@ export const dynamic = "force-dynamic";
  */
 async function ProjectsPageData({ contact }: { contact: ContactPageContent }) {
   const projects = await getSiteProjects(null);
-  return <ProjectsPageScroll projects={projects} contact={contact} />;
+  /* Ảnh mờ LQIP cho ảnh bìa thẻ dự án (hiện đúng vùng ảnh, không phủ lề). */
+  const placeholders = await getMediaPlaceholders(
+    projects.map((project) => project.illustration),
+  );
+  return (
+    <MediaPlaceholdersProvider value={placeholders}>
+      <ProjectsPageScroll projects={projects} contact={contact} />
+    </MediaPlaceholdersProvider>
+  );
 }
 
 export default async function ProjectsPage() {

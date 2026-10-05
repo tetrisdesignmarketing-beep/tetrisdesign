@@ -6,9 +6,10 @@ import {
   useContext,
   useMemo,
   useState,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { parseProjectCategory, type ProjectCategory } from "@/lib/site-content";
 
 interface ProjectsCategoryContextValue {
@@ -36,17 +37,46 @@ export function useProjectsCategory() {
   return ctx;
 }
 
+function subscribeUrl(onChange: () => void) {
+  window.addEventListener("popstate", onChange);
+  return () => window.removeEventListener("popstate", onChange);
+}
+
+function readUrlCategory(): string | null {
+  return new URLSearchParams(window.location.search).get("category");
+}
+
+/** Lúc dựng sẵn trang (server) không có query → "Tất cả". */
+function readServerCategory(): string | null {
+  return null;
+}
+
 export function ProjectsCategoryProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  // Lazy init — chỉ đọc URL 1 lần lúc mount (deep-link `/projects?category=fnb`).
-  const [category, setCategoryState] = useState<ProjectCategory | null>(() =>
-    parseProjectCategory(searchParams.get("category") ?? undefined),
+  /*
+   * KHÔNG dùng `useSearchParams()`: trang /projects được dựng sẵn (ISR), mà
+   * useSearchParams trong trang dựng sẵn khiến cả cây bên trong chỉ render ở
+   * trình duyệt (HTML trống danh sách dự án → chậm + mất SEO).
+   * useSyncExternalStore: HTML dựng sẵn = "Tất cả"; trình duyệt đọc
+   * `?category=` (deep-link) ngay khi hydrate, không lỗi lệch hydration.
+   */
+  const urlCategory = useSyncExternalStore(
+    subscribeUrl,
+    readUrlCategory,
+    readServerCategory,
   );
+  /* undefined = người xem chưa tự chọn tab → theo URL. */
+  const [picked, setPicked] = useState<ProjectCategory | null | undefined>(
+    undefined,
+  );
+  const category =
+    picked !== undefined
+      ? picked
+      : parseProjectCategory(urlCategory ?? undefined);
 
   const setCategory = useCallback(
     (next: ProjectCategory | null) => {
-      setCategoryState(next);
+      setPicked(next);
       const href = next ? `${pathname}?category=${next}` : pathname;
       window.history.replaceState(window.history.state, "", href);
     },

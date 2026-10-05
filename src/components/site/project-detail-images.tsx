@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { ProjectDetailLightbox } from "@/components/site/project-detail-lightbox";
@@ -15,8 +15,18 @@ import { cn } from "@/lib/utils";
 interface ProjectDetailImagesProps {
   images: string[];
   title: string;
+  /** Ảnh mờ siêu nhỏ theo URL (Media.placeholder) → ô ảnh không bao giờ trống. */
+  placeholders?: Record<string, string>;
   className?: string;
 }
+
+/** Nền ảnh mờ (LQIP) cho khung ảnh — hiện ngay trong HTML trước khi ảnh tải. */
+function placeholderStyle(placeholder: string | undefined): CSSProperties {
+  return placeholder
+    ? { backgroundImage: `url("${placeholder.replace(/"/g, "%22")}")` }
+    : {};
+}
+
 
 const MARQUEE_REPEAT = 8;
 
@@ -28,6 +38,7 @@ function isLeftOfViewport(element: Element) {
 export function ProjectDetailImages({
   images,
   title,
+  placeholders,
   className,
 }: ProjectDetailImagesProps) {
   const rootRef = useRef<HTMLElement>(null);
@@ -203,7 +214,11 @@ export function ProjectDetailImages({
               aria-label={`Xem ${title} — ${String(index + 1).padStart(2, "0")}`}
             >
               <div data-detail-fx className="project-detail-grid__fx">
-                <div data-detail-img className="project-detail-grid__img">
+                <div
+                  data-detail-img
+                  className="project-detail-grid__img"
+                  style={placeholderStyle(placeholders?.[src])}
+                >
                   <ProgressiveImage
                     src={src}
                     alt={`${title} — ${index + 1}`}

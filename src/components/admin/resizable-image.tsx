@@ -42,9 +42,14 @@ export function ResizableImage({
   );
   const [isDragging, setIsDragging] = useState(false);
 
-  useEffect(() => {
-    setDisplayWidth(parseWidthPx(style, widthAttr));
-  }, [style, widthAttr, src]);
+  /* Thuộc tính width đổi (từ editor) / ảnh khác → đồng bộ lại (trong render). */
+  const parsedWidth = parseWidthPx(style, widthAttr);
+  const widthKey = `${parsedWidth}\u0001${src}`;
+  const [prevWidthKey, setPrevWidthKey] = useState(widthKey);
+  if (prevWidthKey !== widthKey) {
+    setPrevWidthKey(widthKey);
+    setDisplayWidth(parsedWidth);
+  }
 
   const handleResizeStart = useCallback(
     (e: React.MouseEvent) => {

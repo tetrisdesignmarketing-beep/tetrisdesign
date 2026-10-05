@@ -44,6 +44,7 @@ export function useSectionInnerScroll(enabled: boolean) {
   }, [enabled, node]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- đo scroll thực của DOM sau khi mount
     sync();
   }, [sync]);
 

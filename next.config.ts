@@ -45,8 +45,7 @@ const nextConfig: NextConfig = {
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
     formats: ["image/avif", "image/webp"],
     // 45 = canvas preview; 75 = default next/image + canvas full
-    // 30 = THỬ NGHIỆM tạm (About morph) — xoá khi test xong
-    qualities: [30, 45, 75],
+    qualities: [45, 75],
     deviceSizes: [640, 750, 828, 1080, 1200],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
     remotePatterns: [
@@ -75,10 +74,9 @@ const nextConfig: NextConfig = {
     ],
   },
   experimental: {
-    serverActions: {
-      bodySizeLimit: "50mb",
-    },
-    // 0 = prefetch `/` (force-dynamic) ngay khi logo/nav visible → Safari loop GET /
+    // Server Action duy nhất là đăng xuất → dùng giới hạn body mặc định (1MB).
+    // Upload media đi qua Route Handler / signed upload, không qua Server Action.
+    // 0 = prefetch `/` ngay khi logo/nav visible → Safari loop GET /
     staleTimes: {
       dynamic: 30,
       static: 300,
@@ -91,6 +89,21 @@ const nextConfig: NextConfig = {
      thật (SEO). Chỉ thêm header, không chặn người dùng truy cập. */
   async headers() {
     return [
+      /* Header bảo mật cơ bản cho mọi trang. Không đặt CSP đầy đủ (inline
+         script của layout, Google Maps, Supabase…) để tránh vỡ tính năng. */
+      {
+        source: "/:path*",
+        headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          /* Không cho trang khác nhúng site trong iframe (chống clickjacking). */
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          {
+            key: "Permissions-Policy",
+            value: "camera=(), microphone=(), geolocation=(), browsing-topics=()",
+          },
+        ],
+      },
       {
         source: "/:path*",
         has: [{ type: "host", value: "(?<vercelHost>.+)\\.vercel\\.app" }],

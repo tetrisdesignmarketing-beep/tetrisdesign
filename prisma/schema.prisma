@@ -89,6 +89,9 @@ model Media {
   /// Kích thước ảnh đã lưu (sau xoay EXIF / nén). Null: video, SVG, ảnh cũ chưa backfill.
   width     Int?
   height    Int?
+  /// Ảnh mờ siêu nhỏ (data URI WebP ~20px, ~400 ký tự) — hiện ngay trong HTML
+  /// trước khi ảnh thật tải (LQIP). Null: video, SVG, ảnh cũ chưa backfill.
+  placeholder String?
   createdAt DateTime @default(now())
 
   @@index([type, createdAt(sort: Desc)])

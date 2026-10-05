@@ -64,6 +64,7 @@ export function HomeProjectCurtainCard({
         window.matchMedia("(max-width: 767px)").matches;
       if (reduceMotion || touchUi) {
         revealedRef.current = true;
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- cần matchMedia (chỉ có sau khi mount) để quyết định bỏ animation
         setRevealed(true);
         setCoverGone(true);
         return;
@@ -127,12 +128,21 @@ export function HomeProjectCurtainCard({
 
     observer.observe(el);
 
-    const onScroll = () => tryReveal();
+    /* IntersectionObserver là chính; cuộn chỉ là lưới an toàn → gom tối đa
+       1 lần kiểm tra / 120ms thay vì đo vị trí thẻ mỗi khung hình. */
+    let scrollTimer = 0;
+    const onScroll = () => {
+      if (scrollTimer) return;
+      scrollTimer = window.setTimeout(() => {
+        scrollTimer = 0;
+        tryReveal();
+      }, 120);
+    };
     if (scrollRoot) {
       scrollRoot.addEventListener("scroll", onScroll, { passive: true });
     } else {
       window.addEventListener("scroll", onScroll, { passive: true });
-      window.addEventListener("scrollend", onScroll, { passive: true });
+      window.addEventListener("scrollend", tryReveal, { passive: true });
     }
     window.addEventListener("resize", onScroll, { passive: true });
 
@@ -160,11 +170,12 @@ export function HomeProjectCurtainCard({
     return () => {
       observer.disconnect();
       window.clearTimeout(fallbackTimer);
+      window.clearTimeout(scrollTimer);
       if (scrollRoot) {
         scrollRoot.removeEventListener("scroll", onScroll);
       } else {
         window.removeEventListener("scroll", onScroll);
-        window.removeEventListener("scrollend", onScroll);
+        window.removeEventListener("scrollend", tryReveal);
       }
       window.removeEventListener("resize", onScroll);
     };

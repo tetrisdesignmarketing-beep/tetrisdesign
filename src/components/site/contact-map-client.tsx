@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { importLibrary, setOptions } from "@googlemaps/js-api-loader";
 import { siteContact } from "@/lib/site-content";
 import {
@@ -99,8 +99,11 @@ export function ContactMapClient({ onMapReady, onError, className }: ContactMapC
   const onMapReadyRef = useRef(onMapReady);
   const onErrorRef = useRef(onError);
 
-  onMapReadyRef.current = onMapReady;
-  onErrorRef.current = onError;
+  /* Giữ callback mới nhất cho effect/timer — gán sau commit, không gán trong render. */
+  useLayoutEffect(() => {
+    onMapReadyRef.current = onMapReady;
+    onErrorRef.current = onError;
+  });
 
   useEffect(() => {
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;

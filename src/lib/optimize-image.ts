@@ -1,3 +1,10 @@
+import {
+  MEDIA_PLACEHOLDER_QUALITY,
+  MEDIA_PLACEHOLDER_WIDTH,
+  MEDIA_VARIANT_QUALITY,
+  MEDIA_VARIANT_WIDTHS,
+} from "@/lib/media-variants";
+
 /** Cạnh dài tối đa — giữ UHD/4K long-edge; cắt ảnh điện thoại lớn hơn. */
 export const MEDIA_IMAGE_MAX_EDGE = 3840;
 
@@ -120,5 +127,58 @@ export async function optimizeImageForUpload(
     };
   } catch {
     return passthrough;
+  }
+}
+
+export type MediaVariantBuffer = { width: number; buffer: Buffer };
+
+/**
+ * Tạo bộ bản thu nhỏ WebP (xem `media-variants.ts`) từ ảnh đã lưu: xoay EXIF,
+ * resize theo CHIỀU RỘNG (khớp mô tả `w` trong srcset), không phóng to ảnh
+ * nhỏ. Ảnh động / sharp lỗi → [] (site tự dùng ảnh gốc).
+ */
+export async function generateMediaVariants(
+  buffer: Buffer,
+): Promise<MediaVariantBuffer[]> {
+  const sharp = await loadSharp();
+  if (!sharp) return [];
+  try {
+    const meta = await sharp(buffer, { failOn: "none", animated: true }).metadata();
+    if ((meta.pages ?? 1) > 1) return [];
+    const variants: MediaVariantBuffer[] = [];
+    for (const width of MEDIA_VARIANT_WIDTHS) {
+      const output = await sharp(buffer, { failOn: "none" })
+        .rotate()
+        .resize({ width, withoutEnlargement: true })
+        .webp({ quality: MEDIA_VARIANT_QUALITY })
+        .toBuffer();
+      variants.push({ width, buffer: output });
+    }
+    return variants;
+  } catch (err) {
+    console.error("[optimize-image] generate variants failed:", err);
+    return [];
+  }
+}
+
+/**
+ * Ảnh mờ siêu nhỏ (LQIP) dạng data URI — trình duyệt phóng to 20px thành nền
+ * mờ đúng màu ảnh, hiện ngay khi HTML tới. Ảnh động / lỗi → null.
+ */
+export async function generateMediaPlaceholder(
+  buffer: Buffer,
+): Promise<string | null> {
+  const sharp = await loadSharp();
+  if (!sharp) return null;
+  try {
+    const output = await sharp(buffer, { failOn: "none" })
+      .rotate()
+      .resize({ width: MEDIA_PLACEHOLDER_WIDTH })
+      .webp({ quality: MEDIA_PLACEHOLDER_QUALITY })
+      .toBuffer();
+    return `data:image/webp;base64,${output.toString("base64")}`;
+  } catch (err) {
+    console.error("[optimize-image] generate placeholder failed:", err);
+    return null;
   }
 }

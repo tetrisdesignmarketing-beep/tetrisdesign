@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidateSite } from "@/lib/revalidate-site";
 import { auth } from "@/auth";
 import { getMediaTitles } from "@/lib/get-media-titles";
 import {
@@ -51,6 +52,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       where: { id },
       data: { title: parsed.data.title },
     });
+    revalidateSite();
     return NextResponse.json(media);
   } catch (err) {
     const message =
@@ -79,9 +81,10 @@ export async function DELETE(_request: Request, context: RouteContext) {
     const supabase = createSupabaseAdmin();
     const bucket = getStorageBucket();
 
+    const { mediaVariantPaths } = await import("@/lib/media-storage");
     const { error: deleteError } = await supabase.storage
       .from(bucket)
-      .remove([media.path]);
+      .remove([media.path, ...mediaVariantPaths(media.path)]);
 
     if (deleteError) {
       return NextResponse.json(
@@ -91,6 +94,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
     }
 
     await prisma.media.delete({ where: { id } });
+    revalidateSite();
     return NextResponse.json({ success: true });
   } catch (err) {
     const message =

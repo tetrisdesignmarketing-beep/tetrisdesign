@@ -9,79 +9,30 @@ import {
   CANVAS_PREVIEW_WIDTH,
 } from "@/lib/optimized-image-src";
 import { cn } from "@/lib/utils";
+import {
+  buildRows,
+  gallerySizes,
+  isPortrait,
+  pairShareOf,
+  type GalleryItem,
+} from "@/lib/project-gallery-rows";
 
 interface ProjectDetailImagesDefaultProps {
   images: string[];
   title: string;
+  /** Ảnh mờ siêu nhỏ theo URL (Media.placeholder) → khung không bao giờ trống. */
+  placeholders?: Record<string, string>;
   /** Kích thước thật theo URL (server tra từ Media). Thiếu → đo ở trình duyệt. */
   dimensions?: Record<string, MediaDimensions>;
   className?: string;
 }
 
 const EAGER_COUNT = 4;
-/** Rộng/cao < 0.9 → ảnh dọc. Gần vuông (0.9–1.1) coi như ngang (full width). */
-const PORTRAIT_MAX_RATIO = 0.9;
-
-type GalleryItem = {
-  src: string;
-  /** Vị trí gốc theo thứ tự admin (mobile hiển thị theo thứ tự này). */
-  sourceIndex: number;
-  /** Rộng/cao; null = chưa biết. */
-  ratio: number | null;
-};
-
-type GalleryRow =
-  | { kind: "single"; items: [GalleryItem] }
-  | { kind: "pair"; items: [GalleryItem, GalleryItem] };
-
-function isPortrait(item: GalleryItem) {
-  return item.ratio !== null && item.ratio < PORTRAIT_MAX_RATIO;
-}
-
-/**
- * Desktop: ảnh ngang = 1 hàng full; ảnh dọc luôn ghép cặp với ảnh dọc gần nhất
- * phía sau (bỏ qua ảnh ngang ở giữa) → thứ tự hiển thị có thể khác thứ tự
- * admin. Ảnh dọc lẻ cuối cùng → ghép với hàng ảnh ngang liền trước (hoặc liền
- * sau) thành 1 hàng "justified" (cùng chiều cao, rộng theo tỷ lệ) để vẫn phủ
- * kín chiều ngang mà không cắt; chỉ khi không có hàng đơn kề bên mới đứng riêng.
- */
-function buildRows(items: GalleryItem[]): GalleryRow[] {
-  const rows: GalleryRow[] = [];
-  let openPair: GalleryRow | null = null;
-  for (const item of items) {
-    if (!isPortrait(item)) {
-      rows.push({ kind: "single", items: [item] });
-      continue;
-    }
-    if (openPair && openPair.kind === "single") {
-      const first = openPair.items[0];
-      const index = rows.indexOf(openPair);
-      rows[index] = { kind: "pair", items: [first, item] };
-      openPair = null;
-      continue;
-    }
-    openPair = { kind: "single", items: [item] };
-    rows.push(openPair);
-  }
-
-  if (openPair) {
-    const lone = openPair.items[0];
-    const index = rows.indexOf(openPair);
-    const prev = rows[index - 1];
-    const next = rows[index + 1];
-    if (prev?.kind === "single") {
-      rows.splice(index - 1, 2, { kind: "pair", items: [prev.items[0], lone] });
-    } else if (next?.kind === "single") {
-      rows.splice(index, 2, { kind: "pair", items: [lone, next.items[0]] });
-    }
-  }
-  return rows;
-}
-
-/** Phần chiều ngang của 1 ảnh trong hàng ghép = tỷ lệ ảnh / tổng tỷ lệ hàng. */
-function pairShareOf(items: GalleryItem[], item: GalleryItem) {
-  const total = items.reduce((sum, it) => sum + (it.ratio ?? 1), 0);
-  return total > 0 ? (item.ratio ?? 1) / total : 1 / items.length;
+/** Nền ảnh mờ (LQIP) cho khung ảnh — hiện ngay trong HTML trước khi ảnh tải. */
+function placeholderStyle(placeholder: string | undefined): CSSProperties {
+  return placeholder
+    ? { backgroundImage: `url("${placeholder.replace(/"/g, "%22")}")` }
+    : {};
 }
 
 /** Gallery LAYOUTDEFAULT — cursor mắt khi hover, lightbox như LAYOUT1. */
@@ -89,6 +40,7 @@ export function ProjectDetailImagesDefault({
   images,
   title,
   dimensions,
+  placeholders,
   className,
 }: ProjectDetailImagesDefaultProps) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
@@ -160,6 +112,7 @@ export function ProjectDetailImagesDefault({
         )}
         style={
           {
+            ...placeholderStyle(placeholders?.[item.src]),
             "--pd-order": item.sourceIndex,
             /* Khung đúng tỷ lệ ảnh → ảnh lấp kín khung, không cắt, không viền */
             ...(item.ratio ? { "--pd-ratio": item.ratio } : null),
@@ -179,11 +132,10 @@ export function ProjectDetailImagesDefault({
             fullWidth={CANVAS_FULL_WIDTH}
             layout="flow"
             loading={item.sourceIndex < EAGER_COUNT ? "eager" : "lazy"}
-            sizes={
-              inPair
-                ? `(min-width: 1024px) ${Math.ceil(pairShare * 100)}vw, 100vw`
-                : "100vw"
-            }
+            sizes={gallerySizes(pairShare)}
+            /* Hàng đầu = ảnh đầu trang: ưu tiên cao + tải lớp nét ngay (đã
+               preload từ server, xem projects/[slug]/page.tsx). */
+            priority={rows[0]?.items.includes(item) ?? false}
             className="project-detail-images-default__img"
           />
         </button>

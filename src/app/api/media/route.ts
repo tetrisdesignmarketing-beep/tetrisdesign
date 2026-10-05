@@ -156,6 +156,12 @@ export async function POST(request: Request) {
       );
     }
 
+    if (validation.type === "image") {
+      /* Bản thu nhỏ cho srcset (lỗi → site dùng ảnh gốc, không chặn upload). */
+      const { storeMediaVariants } = await import("@/lib/media-storage");
+      await storeMediaVariants(path, optimized.buffer);
+    }
+
     const url = getPublicUrl(path);
     const media = await prisma.media.create({
       data: {
@@ -168,8 +174,18 @@ export async function POST(request: Request) {
         type: validation.type,
       },
     });
-    const { saveMediaDimensions } = await import("@/lib/media-dimensions");
+    const { saveMediaDimensions, saveMediaPlaceholder } = await import(
+      "@/lib/media-dimensions"
+    );
     await saveMediaDimensions(media.id, optimized.width, optimized.height);
+    if (validation.type === "image") {
+      /* Ảnh mờ LQIP — khung ảnh trên site không bao giờ trống. */
+      const { generateMediaPlaceholder } = await import("@/lib/optimize-image");
+      await saveMediaPlaceholder(
+        media.id,
+        await generateMediaPlaceholder(optimized.buffer),
+      );
+    }
 
     return NextResponse.json(media, { status: 201 });
   } catch (err) {

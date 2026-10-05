@@ -17,11 +17,9 @@ interface AboutPageScrollProps {
 
 /**
  * Cuộn bình thường (không còn FullPageScrollRoot/pager) — animation hero +
- * brand-break giờ tự đo theo window scroll (xem use-morph-pin-scroll.ts).
- * LƯU Ý: không thêm id="about-hero"/id="about-brand-break" vào bất kỳ element
- * nào trong cây này — có 1 rule CSS "ngủ" trong globals.css chỉ kích hoạt khi
- * 2 id đó tồn tại MÀ không có [data-full-page-scroll] bao ngoài, ép scroll-snap
- * trên mobile và sẽ xung đột với animation morph-pin đang cuộn liên tục.
+ * brand-break tự đo theo window scroll (xem use-morph-pin-scroll.ts).
+ * Không thêm scroll-snap cho trang này: snap sẽ dừng cuộn giữa chừng và xung
+ * đột với animation morph-pin đang chạy liên tục theo vị trí cuộn.
  */
 export function AboutPageScroll({ content, contact }: AboutPageScrollProps) {
   return (

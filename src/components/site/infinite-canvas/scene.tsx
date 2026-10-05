@@ -161,6 +161,7 @@ function MediaPlane({
     const state = localState.current;
     state.ready = false;
     state.opacity = 0;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset trạng thái fade khi đổi texture (đồng bộ với three.js)
     setIsReady(false);
 
     const material = materialRef.current;
@@ -353,24 +354,30 @@ function SceneController({
   const pointerStartRef = React.useRef<{ x: number; y: number; index: number | null } | null>(null);
   const pointerMovedRef = React.useRef(false);
   const onMediaSelectRef = React.useRef(onMediaSelect);
-  onMediaSelectRef.current = onMediaSelect;
-  const raycaster = React.useMemo(() => new THREE.Raycaster(), []);
-  const ndc = React.useMemo(() => new THREE.Vector2(), []);
+  /* Raycaster/vector tái sử dụng (đối tượng three.js bị mutate) → giữ trong ref. */
+  const raycasterRef = React.useRef<THREE.Raycaster | null>(null);
+  const ndcRef = React.useRef<THREE.Vector2 | null>(null);
   const hitMediaIndexRef = React.useRef<(x: number, y: number) => number | null>(() => null);
-  hitMediaIndexRef.current = (clientX, clientY) => {
-    const rect = gl.domElement.getBoundingClientRect();
-    if (rect.width === 0 || rect.height === 0) return null;
-    ndc.x = ((clientX - rect.left) / rect.width) * 2 - 1;
-    ndc.y = -((clientY - rect.top) / rect.height) * 2 + 1;
-    raycaster.setFromCamera(ndc, camera);
-    const hits = raycaster.intersectObjects(scene.children, true);
-    for (const hit of hits) {
-      if (!hit.object.visible) continue;
-      const idx = hit.object.userData.mediaIndex;
-      if (typeof idx === "number") return idx;
-    }
-    return null;
-  };
+  /* Giữ callback/giá trị mới nhất cho handler — gán sau commit, không gán trong render. */
+  React.useLayoutEffect(() => {
+    onMediaSelectRef.current = onMediaSelect;
+    hitMediaIndexRef.current = (clientX, clientY) => {
+      const rect = gl.domElement.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return null;
+      const raycaster = (raycasterRef.current ??= new THREE.Raycaster());
+      const ndc = (ndcRef.current ??= new THREE.Vector2());
+      ndc.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+      ndc.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(ndc, camera);
+      const hits = raycaster.intersectObjects(scene.children, true);
+      for (const hit of hits) {
+        if (!hit.object.visible) continue;
+        const idx = hit.object.userData.mediaIndex;
+        if (typeof idx === "number") return idx;
+      }
+      return null;
+    };
+  });
 
   const [chunks, setChunks] = React.useState<ChunkData[]>([]);
 
@@ -657,6 +664,7 @@ function SceneController({
     const s = state.current;
     s.basePos = { x: camera.position.x, y: camera.position.y, z: camera.position.z };
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- khởi tạo chunk theo vị trí camera thực (chỉ có sau khi mount)
     setChunks(
       CHUNK_OFFSETS.map((o) => ({
         key: `${o.dx},${o.dy},${o.dz}`,

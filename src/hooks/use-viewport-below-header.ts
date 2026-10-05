@@ -46,6 +46,7 @@ export function useViewportBelowHeader(): ViewportBelowHeader {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- đo viewport/header thực của DOM sau khi mount
     sync();
 
     window.addEventListener("resize", sync, { passive: true });

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidateSite } from "@/lib/revalidate-site";
 import { Prisma } from "@prisma/client";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
@@ -69,6 +70,7 @@ export async function PUT(request: Request, context: RouteContext) {
       update: { content },
     });
 
+    revalidateSite();
     return NextResponse.json(page);
   } catch (err) {
     console.error("Update site page error:", err);

@@ -32,6 +32,10 @@
      public — đổi 1 chỗ, áp mọi nơi không đặt độ đậm riêng. Neue Einstellung
      đang đóng gói 400/500/700 (xem @font-face). Admin giữ 400. */
   --site-body-font-weight: 400;
+  /* Nền tạm của khung ảnh khi ảnh chưa tải (xám ấm nhạt) — thay vì trắng.
+     Nền tối (vd. lưới LAYOUT1 nền đen) dùng --site-image-placeholder-dark. */
+  --site-image-placeholder: #eeebe6;
+  --site-image-placeholder-dark: #1c1a19;
   --site-header-pad-top: 25px;
   --site-header-pad-bottom: 25px;
   --site-header-pad-inline: 28px;
@@ -578,8 +582,10 @@ html:has([data-full-page-scroll-active]) main {
   overflow: hidden;
 }
 
-/* About intro/awards — blur theo inner scroll Y (không moving letters) */
+/* About intro/awards — hiện dần (opacity) theo scroll Y (không moving letters) */
 [data-about-intro] {
+  /* Độ đục thấp nhất khi chữ chưa tới vùng đọc (0 = ẩn hẳn, 1 = không hiệu ứng). */
+  --about-scroll-fade-min: 0.12;
   --about-scroll-blur: 16px;
   --about-scroll-blur-from: 1;
   --about-scroll-blur-to: 0.4;
@@ -619,29 +625,33 @@ html:has([data-full-page-scroll-active]) main {
   margin-top: 12px;
 }
 
+/* Chữ intro/awards hiện dần theo cuộn — trước đây làm mờ (filter: blur) theo
+   từng khung cuộn, rất tốn (vẽ lại cả khối chữ mỗi frame). Giờ chỉ đổi độ đục
+   (opacity — compositor xử lý, không vẽ lại): p = 0 → mờ nhạt, p = 1 → rõ.
+   Giữ tên biến/attribute cũ (--about-scroll-blur-p do use-scroll-y-blur ghi). */
 [data-about-intro] [data-scroll-blur] {
   --about-scroll-blur-p: 1;
-  filter: blur(
-    calc((1 - var(--about-scroll-blur-p, 1)) * var(--about-scroll-blur, 16px))
+  opacity: calc(
+    var(--about-scroll-fade-min, 0.12) +
+      (1 - var(--about-scroll-fade-min, 0.12)) * var(--about-scroll-blur-p, 1)
   );
 }
 
 [data-about-intro][data-scroll-blur-settled] [data-scroll-blur] {
   --about-scroll-blur-p: 1;
-  filter: none;
+  opacity: 1;
 }
 
-/* Mobile: blur-to 0.4 để text dưới ảnh (nửa dưới màn) luôn mờ; filter +
-   transform morph-pin cũng hay kẹt trên iOS Safari. Tắt blur — giữ desktop. */
+/* Mobile: tắt hiệu ứng (như trước) — chữ hiện rõ ngay. */
 @media (pointer: coarse), (max-width: 767px) {
   [data-about-intro] [data-scroll-blur] {
-    filter: none;
+    opacity: 1;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   [data-about-intro] [data-scroll-blur] {
-    filter: none;
+    opacity: 1;
   }
 }
 
@@ -1434,7 +1444,7 @@ html:has(#hero-carousel) body {
   z-index: 0;
   isolation: isolate;
   width: 100%;
-  /* 100vh/lvh — không dvh: tránh khe trắng + #home-projects ló ra trigger animation */
+  /* 100vh/lvh — không dvh: tránh khe trắng khi thanh URL mobile thu/nhả */
   height: 100vh;
   height: 100lvh;
   min-height: 100vh;
@@ -1496,126 +1506,6 @@ html:has(#hero-carousel) body {
   }
 }
 
-#home-projects {
-  /* Cổng reveal: scroll tới 50% màn hình thực (JS đọc token) */
-  --home-project-gate-scroll-ratio: 0.5;
-  /* Fit ~3.25 hàng (3 full + peek hàng 4) trong 1 viewport dưới header — mobile */
-  --home-projects-visible-rows: 3.25;
-  --home-projects-gap-x: 0.5rem;
-  --home-projects-gap-y: 0.75rem;
-  --home-projects-caption-h: 2.5rem;
-  --home-projects-pad-top: 48px;
-  --home-projects-pad-bottom: 0px;
-  --home-projects-pad-inline: 30px;
-  --home-projects-list-mt: 0px;
-  --home-projects-title-block-h: 0px;
-  --home-projects-media-h: calc(
-    (
-        100lvh - var(--site-header-total-height) - var(--home-projects-pad-top) -
-          var(--home-projects-pad-bottom) - var(--home-projects-list-mt) -
-          var(--home-projects-title-block-h) -
-          (var(--home-projects-visible-rows) - 1) * var(--home-projects-gap-y) -
-          var(--home-projects-visible-rows) * var(--home-projects-caption-h)
-      ) / var(--home-projects-visible-rows)
-  );
-  --home-projects-card-h: calc(
-    var(--home-projects-media-h) + var(--home-projects-caption-h)
-  );
-  position: relative;
-  z-index: 1;
-  background: var(--brand-white);
-  padding: var(--home-projects-pad-top) var(--home-projects-pad-inline)
-    var(--home-projects-pad-bottom);
-  box-sizing: border-box;
-}
-
-#home-projects[data-home-section="projects"] {
-  min-height: calc(100vh - var(--site-header-total-height));
-  min-height: calc(100lvh - var(--site-header-total-height));
-}
-
-/* Home grid: thu card để vừa --home-projects-visible-rows hàng */
-#home-projects [data-project-cover] {
-  margin-top: var(--home-projects-list-mt);
-  /* Đáy list = đúng chiều cao 2 card li (media + caption) */
-  margin-bottom: calc(1.5 * var(--home-projects-card-h));
-  gap: var(--home-projects-gap-y) var(--home-projects-gap-x);
-  align-content: start;
-}
-
-#home-projects [data-project-cover] [data-project-card-media] {
-  aspect-ratio: auto;
-  height: var(--home-projects-media-h);
-}
-
-@media (min-width: 768px) {
-  #home-projects [data-project-cover] [data-project-card-media] {
-    height: max(200px, var(--home-projects-media-h));
-    min-height: 200px;
-  }
-}
-
-#home-projects [data-project-cover] [data-section-title],
-#home-projects [data-project-cover] h3 {
-  margin-top: 0.35rem;
-  font-size: 11px;
-  line-height: 1.2;
-}
-
-/* Tên dự án — cùng cỡ/độ đậm với label menu (biến global). */
-#home-projects [data-project-cover] h3 {
-  font-size: var(--site-label-font-size);
-  font-weight: var(--site-label-font-weight);
-}
-
-#home-projects [data-project-cover] p {
-  margin-top: 0.15rem;
-  font-size: 10px;
-  line-height: 1.25;
-}
-
-@media (min-width: 768px) {
-  #home-projects {
-    /* md+: 3 cột → 6 item = 2 hàng */
-    --home-projects-visible-rows: 2;
-    --home-projects-gap-x: 1rem;
-    --home-projects-gap-y: 1.25rem;
-    --home-projects-caption-h: 3rem;
-    --home-projects-pad-top: 78px;
-    --home-projects-heading-h: 1.25rem;
-    --home-projects-heading-gap: 48px;
-    --home-projects-list-mb: 100px;
-    --home-projects-title-block-h: calc(
-      var(--home-projects-heading-h) + var(--home-projects-heading-gap)
-    );
-  }
-
-  #home-projects [data-project-cover] {
-    margin-bottom: var(--home-projects-list-mb);
-  }
-
-  #home-projects [data-home-projects-heading] {
-    width: 100vw;
-    max-width: 100vw;
-    margin-inline: calc(50% - 50vw);
-    margin-bottom: var(--home-projects-heading-gap);
-    text-align: center;
-    font-size: var(--site-label-font-size);
-    font-weight: var(--site-label-font-weight);
-    line-height: var(--home-projects-heading-h);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--foreground);
-  }
-
-  #home-projects [data-project-cover] h3 {
-    font-size: var(--site-label-font-size);
-  }
-
-  #home-projects [data-project-cover] p {
-    font-size: 11px;
-  }
-}
 
 [data-hero-caption] {
   padding-bottom: max(2.5rem, env(safe-area-inset-bottom, 0px));
@@ -1642,22 +1532,14 @@ html:has(#hero-carousel) body {
 }
 
 @media (max-width: 767px) {
-  html:has(#hero-carousel),
-  html:has(#about-hero):not(:has([data-full-page-scroll])) {
+  html:has(#hero-carousel) {
     scroll-snap-type: y proximity;
-    /* Padding cho snap hero; không snap anchor B — tránh kéo scroll về Y=0 bị menu che */
     scroll-padding-top: var(--site-header-total-height);
   }
 
-  #hero-carousel,
-  html:not(:has([data-full-page-scroll])) #about-hero {
+  #hero-carousel {
     scroll-snap-align: start;
     scroll-snap-stop: always;
-  }
-
-  /* scroll-margin cho anchor/link; KHÔNG scroll-snap-align — snap JS dùng header offset (P0 #4) */
-  #home-projects {
-    scroll-margin-top: var(--site-header-total-height);
   }
 }
 
@@ -2288,9 +2170,24 @@ ul:has(.project-card-hover-scale) {
 .project-detail-images-default__item {
   margin: 0;
   width: 100%;
+  /* Ảnh chưa tải → khung xám ấm thay vì trắng (ảnh luôn phủ kín khung nên
+     nền này không lộ ra sau khi ảnh hiện). */
+  background-color: var(--site-image-placeholder);
+  /* Ảnh mờ LQIP (inline style background-image) phủ kín khung. */
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
   /* Khung đúng tỷ lệ ảnh (khi đã biết) → giữ chỗ trước khi tải, ảnh lấp kín
      khung mà không cắt. Chưa biết tỷ lệ → auto, cao theo ảnh. */
   aspect-ratio: var(--pd-ratio, auto);
+}
+
+/* Chưa biết tỷ lệ (ảnh chưa có width/height trong Media): giữ chỗ tạm 3:2
+   thay vì cao 0 → nội dung bên dưới không bị đẩy khi ảnh tải xong. Tỷ lệ thật
+   được đo ngay khi ảnh xem trước tải (hoặc chạy media:backfill-variants). */
+.project-detail-images-default__item:not([style*="--pd-ratio"]) {
+  aspect-ratio: 3 / 2;
+  overflow: hidden;
 }
 
 /* Mobile/tablet: bỏ nhóm cặp, trả ảnh về đúng thứ tự admin (order = vị trí gốc). */
@@ -2527,6 +2424,11 @@ ul:has(.project-card-hover-scale) {
 .project-detail-grid__img {
   position: absolute;
   inset: 0;
+  /* Lưới LAYOUT1 nằm trên nền đen → nền tạm tối, không loá khi ảnh chưa tải. */
+  background-color: var(--site-image-placeholder-dark);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
   backface-visibility: hidden;
   will-change: transform;
 }

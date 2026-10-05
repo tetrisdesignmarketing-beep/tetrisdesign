@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import Link from "next/link";
 import { CarouselDots } from "@/components/site/carousel-dots";
 import { ProgressiveImage } from "@/components/site/progressive-image";
@@ -71,7 +77,10 @@ export function HeroCarousel({
   const [activeIndex, setActiveIndex] = useState(0);
   const [isHeroActive, setIsHeroActive] = useState(true);
   const [isHovered, setIsHovered] = useState(false);
-  activeIndexRef.current = activeIndex;
+  /* Giá trị mới nhất cho handler/timer — gán sau commit, không gán trong render. */
+  useLayoutEffect(() => {
+    activeIndexRef.current = activeIndex;
+  }, [activeIndex]);
 
   const syncSlideWidth = useCallback(() => {
     const section = sectionRef.current;
@@ -104,7 +113,9 @@ export function HeroCarousel({
     },
     [slides.length],
   );
-  goToRef.current = goTo;
+  useLayoutEffect(() => {
+    goToRef.current = goTo;
+  }, [goTo]);
 
   useEffect(() => {
     const sync = () => {
@@ -387,6 +398,9 @@ export function HeroCarousel({
                 loadFull={distance <= 1}
                 persistFull
                 priority={index === 0}
+                /* 2 ảnh (mobile + desktop, 1 cái bị ẩn) cùng tải → không tải
+                   lớp nét song song, tránh tải thừa ảnh lớn của bản bị ẩn. */
+                eagerFull={false}
                 className="pointer-events-none object-cover md:hidden"
               />
               <ProgressiveImage
@@ -398,6 +412,9 @@ export function HeroCarousel({
                 loadFull={distance <= 1}
                 persistFull
                 priority={index === 0}
+                /* 2 ảnh (mobile + desktop, 1 cái bị ẩn) cùng tải → không tải
+                   lớp nét song song, tránh tải thừa ảnh lớn của bản bị ẩn. */
+                eagerFull={false}
                 className="pointer-events-none hidden object-cover md:block"
               />
             </div>

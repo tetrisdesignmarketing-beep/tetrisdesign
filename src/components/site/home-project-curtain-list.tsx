@@ -58,6 +58,7 @@ export function HomeProjectCurtainList({
     const touchUi =
       window.matchMedia("(pointer: coarse)").matches ||
       window.matchMedia("(max-width: 767px)").matches;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- đọc matchMedia + đo header (DOM) sau khi mount
     setReduceMotion(reduced);
     setHeaderOffset(getHeaderOffset());
     if (reduced || touchUi) {
