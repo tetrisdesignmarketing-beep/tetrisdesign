@@ -23,10 +23,6 @@ export const siteBrand = {
 export const siteNav = [
   { label: "TRANG CHỦ", href: "/" },
   { label: "GIỚI THIỆU", href: "/about" },
-  /* TẠM — 2 phương án cuộn để khách so sánh (lib/about-variant.ts). Chốt xong
-     thì xoá 2 dòng này + 2 trang (site)/about1, (site)/about2. */
-  { label: "GIỚI THIỆU 1", href: "/about1" },
-  { label: "GIỚI THIỆU 2", href: "/about2" },
   { label: "DỰ ÁN", href: "/projects" },
   { label: "DỊCH VỤ", href: "/services" },
   { label: "LIÊN HỆ", href: "/contact" },

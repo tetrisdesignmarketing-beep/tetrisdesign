@@ -1,4 +1,8 @@
-import { AboutPageView } from "@/components/site/about-page-view";
+import { MediaPlaceholdersProvider } from "@/components/site/media-placeholders";
+import { getMediaPlaceholders } from "@/lib/media-dimensions";
+import { AboutPageScroll } from "@/components/site/about-page-scroll";
+import { getSiteAbout } from "@/lib/get-site-about";
+import { getSiteContact } from "@/lib/get-site-contact";
 import { createPageMetadata } from "@/lib/site-metadata";
 
 export const metadata = createPageMetadata({
@@ -16,6 +20,19 @@ export const metadata = createPageMetadata({
  */
 export const revalidate = 3600;
 
-export default function AboutPage() {
-  return <AboutPageView variant="pin" />;
+export default async function AboutPage() {
+  const [content, contact] = await Promise.all([
+    getSiteAbout(),
+    getSiteContact(),
+  ]);
+  /* Ảnh mờ LQIP cho ảnh lớn (không gồm logo đối tác trong suốt). */
+  const placeholders = await getMediaPlaceholders([
+    content.heroImage,
+    content.brandBreakImage,
+  ]);
+  return (
+    <MediaPlaceholdersProvider value={placeholders}>
+      <AboutPageScroll content={content} contact={contact} />
+    </MediaPlaceholdersProvider>
+  );
 }

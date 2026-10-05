@@ -1348,44 +1348,6 @@ html:has([data-full-page-scroll-active]) main {
   margin-top: min(0px, var(--morph-pin-content-shift, 0px));
 }
 
-/*
-  Phương án A (/about1) — mobile: bỏ ghim + thu nhỏ, ảnh nằm trong luồng trang.
-  Khung ảnh đúng tỷ lệ ảnh (--about-flow-ratio: server biết trước từ DB, JS đo
-  lại khi ảnh tải) → không còn khung cao 1 màn hình trắng phía dưới ảnh.
-  Cùng điều kiện media với isCoarsePointer() trong use-morph-pin-scroll.ts.
-*/
-@media (pointer: coarse), (max-width: 767px) {
-  [data-morph-pin-flow-mobile] [data-morph-pin-track] {
-    height: auto;
-  }
-
-  [data-morph-pin-flow-mobile] [data-morph-pin-pin] {
-    position: relative;
-    top: auto;
-    height: auto;
-    overflow: visible;
-  }
-
-  [data-morph-pin-flow-mobile] [data-morph-pin-image] {
-    flex: none;
-    height: auto;
-    aspect-ratio: var(--about-flow-ratio, 3 / 2);
-    transform: none;
-    animation: none;
-    will-change: auto;
-  }
-
-  [data-morph-pin-flow-mobile] [data-morph-pin-content] {
-    transform: none;
-    margin-top: 0;
-    will-change: auto;
-  }
-
-  /* Ảnh có p-4 (16px) → chữ cách ảnh ~40px */
-  [data-about-hero-morph][data-morph-pin-flow-mobile] [data-morph-pin-content] {
-    padding-top: 1.5rem;
-  }
-}
 
 [data-logo-component] {
   position: absolute;
@@ -1471,7 +1433,7 @@ html:has([data-full-page-scroll-active]) main {
 }
 
 /*
-  Phương án B (/about2) — logo kích hoạt theo vị trí, chạy theo THỜI GIAN:
+  Phương án B (biến thể `timed-logo`, chưa trang nào dùng) — logo kích hoạt theo vị trí, chạy theo THỜI GIAN:
   JS (use-morph-pin-scroll.ts) chỉ đặt data-logo-state = before | rest | after;
   chuyển động là CSS transition cố định → vuốt nhanh hay chậm vẫn chạy đủ.
   before: khối nằm ngoài bên phải · rest: đứng yên đúng chỗ · after: mặt khối

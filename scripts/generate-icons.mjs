@@ -3,6 +3,7 @@
  * Chạy lại khi đổi logo: `node scripts/generate-icons.mjs`
  * - src/app/favicon.ico  (16/32/48 — Google ưu tiên /favicon.ico, bội số 48px)
  * - src/app/apple-icon.png (180, nền đặc — iOS tự bo góc)
+ * - src/app/icon1.png (192 — bản nét cho Google Search)
  * - public/icon-192.png, public/icon-512.png (manifest / Android)
  */
 import { readFile, writeFile } from "node:fs/promises";
@@ -42,12 +43,16 @@ function buildIco(images) {
   return Buffer.concat([header, ...entries, ...images.map((i) => i.data)]);
 }
 
-const icoSizes = [16, 32, 48];
+/* 48 đứng đầu: Next đọc kích thước ảnh đầu tiên để ghi `sizes` cho
+   <link rel="icon"> — Google khuyến nghị favicon ≥ 48px. */
+const icoSizes = [48, 32, 16];
 const icoImages = await Promise.all(
   icoSizes.map(async (size) => ({ size, data: await png(svg, size) })),
 );
 await writeFile("src/app/favicon.ico", buildIco(icoImages));
 await writeFile("src/app/apple-icon.png", await png(squareSvg, 180));
+/* PNG lớn cho Google Search / trình duyệt chọn bản nét (link rel=icon 192x192). */
+await writeFile("src/app/icon1.png", await png(svg, 192));
 await writeFile("public/icon-192.png", await png(svg, 192));
 await writeFile("public/icon-512.png", await png(svg, 512));
 console.log("Đã tạo favicon.ico, apple-icon.png, icon-192.png, icon-512.png");

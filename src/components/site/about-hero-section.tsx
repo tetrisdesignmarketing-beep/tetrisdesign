@@ -1,10 +1,9 @@
 "use client";
 
-import type { CSSProperties, ReactNode } from "react";
+import type { ReactNode } from "react";
 import { AboutHero } from "@/components/site/about-hero";
 import { AboutIntroSection } from "@/components/site/about-intro-section";
 import { useMorphPinScroll } from "@/hooks/use-morph-pin-scroll";
-import type { AboutScrollVariant } from "@/lib/about-variant";
 import { cn } from "@/lib/utils";
 
 interface AboutHeroSectionProps {
@@ -12,9 +11,6 @@ interface AboutHeroSectionProps {
   alt: string;
   children: ReactNode;
   className?: string;
-  variant?: AboutScrollVariant;
-  /** Tỷ lệ rộng/cao ảnh (nếu biết) — dùng cho khung ảnh khi không ghim (A). */
-  imageRatio?: number;
 }
 
 export function AboutHeroSection({
@@ -22,23 +18,14 @@ export function AboutHeroSection({
   alt,
   children,
   className,
-  variant = "pin",
-  imageRatio,
 }: AboutHeroSectionProps) {
-  const flowMobile = variant === "flow-mobile";
-  const rootRef = useMorphPinScroll("about-hero", { flowOnMobile: flowMobile });
+  const rootRef = useMorphPinScroll("about-hero");
 
   return (
     <div
       ref={rootRef}
       data-morph-pin=""
       data-about-hero-morph=""
-      data-morph-pin-flow-mobile={flowMobile ? "" : undefined}
-      style={
-        flowMobile && imageRatio
-          ? ({ "--about-flow-ratio": String(imageRatio) } as CSSProperties)
-          : undefined
-      }
       suppressHydrationWarning
       className={cn("relative w-full bg-background", className)}
     >

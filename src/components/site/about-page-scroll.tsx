@@ -9,17 +9,13 @@ import type {
   AboutPageContent,
   ContactPageContent,
 } from "@/lib/validations/site-page";
-import type {
-  AboutImageRatios,
-  AboutScrollVariant,
-} from "@/lib/about-variant";
+import type { AboutScrollVariant } from "@/lib/about-variant";
 
 interface AboutPageScrollProps {
   content: AboutPageContent;
   contact?: ContactPageContent;
   /** Biến thể cuộn — xem lib/about-variant.ts (mặc định = hiện tại). */
   variant?: AboutScrollVariant;
-  imageRatios?: AboutImageRatios;
 }
 
 /**
@@ -32,15 +28,12 @@ export function AboutPageScroll({
   content,
   contact,
   variant = "pin",
-  imageRatios,
 }: AboutPageScrollProps) {
   return (
     <>
       <AboutHeroSection
         src={content.heroImage}
         alt="Đội ngũ Tetris Design"
-        variant={variant}
-        imageRatio={imageRatios?.hero}
       >
         <div className="mx-auto max-w-3xl px-[var(--site-header-pad-inline)]">
           <ContentSection
@@ -68,7 +61,6 @@ export function AboutPageScroll({
         partners={content.partners.items}
         contact={contact}
         variant={variant}
-        imageRatio={imageRatios?.brandBreak}
       />
     </>
   );

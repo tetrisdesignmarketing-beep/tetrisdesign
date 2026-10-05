@@ -10,7 +10,6 @@ import {
 import type { ContactPageContent } from "@/lib/validations/site-page";
 import type { AboutScrollVariant } from "@/lib/about-variant";
 import { cn } from "@/lib/utils";
-import type { CSSProperties } from "react";
 
 interface BrandBreakSectionProps {
   image: string;
@@ -22,8 +21,6 @@ interface BrandBreakSectionProps {
   className?: string;
   contact?: ContactPageContent;
   variant?: AboutScrollVariant;
-  /** Tỷ lệ rộng/cao ảnh (nếu biết) — dùng cho khung ảnh khi không ghim (A). */
-  imageRatio?: number;
 }
 
 export function BrandBreakSection({
@@ -36,11 +33,9 @@ export function BrandBreakSection({
   className,
   contact,
   variant = "pin",
-  imageRatio,
 }: BrandBreakSectionProps) {
-  const flowMobile = variant === "flow-mobile";
   const timedLogo = variant === "timed-logo";
-  const rootRef = useBrandBreakScroll({ flowOnMobile: flowMobile, timedLogo });
+  const rootRef = useBrandBreakScroll({ timedLogo });
   const logoPhase = useBrandBreakLogoEnter(rootRef);
 
   return (
@@ -50,13 +45,7 @@ export function BrandBreakSection({
       data-brand-break=""
       data-brand-break-animate={logoPhase === "waiting" ? "out" : "in"}
       data-brand-break-logo={logoPhase}
-      data-morph-pin-flow-mobile={flowMobile ? "" : undefined}
       data-logo-mode={timedLogo ? "timed" : undefined}
-      style={
-        flowMobile && imageRatio
-          ? ({ "--about-flow-ratio": String(imageRatio) } as CSSProperties)
-          : undefined
-      }
       suppressHydrationWarning
       className={cn("relative w-full bg-background", className)}
     >

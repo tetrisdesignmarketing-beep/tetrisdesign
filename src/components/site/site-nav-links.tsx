@@ -37,12 +37,12 @@ export function SiteNavLinks({
       <ul
         className={cn(
           "flex flex-col items-center lg:flex-row",
-          menuPhase !== undefined ? "gap-0" : "gap-8 lg:gap-5 xl:gap-8",
+          menuPhase !== undefined ? "gap-0" : "gap-8 lg:gap-8",
         )}
       >
         {siteNav.map((item, index) => {
           const isAdminLink = item.href.startsWith("/admin");
-          /* Khớp đúng đoạn path: /about không sáng khi đang ở /about1. */
+          /* Khớp đúng đoạn path (vd. /projects sáng ở /projects/slug, không sáng ở /projectsx). */
           const isActive =
             item.href === "/"
               ? pathname === "/"

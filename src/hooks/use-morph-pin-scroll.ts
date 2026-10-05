@@ -177,24 +177,12 @@ export function getMorphPinLocalScrollTop(root: HTMLElement): number | null {
   return Math.max(0, headerOffset - trackTop);
 }
 
-/* Phương án A (mobile, không ghim): logo đỏ bám theo vị trí tâm ảnh trên màn
-   hình (tỷ lệ chiều cao viewport, 1 = đáy, 0 = đỉnh). */
-const FLOW_ENTER_START = 0.95;
-const FLOW_ENTER_END = 0.6;
-const FLOW_EXIT_START = 0.4;
-const FLOW_EXIT_END = 0.1;
 /* Phương án B: chống "rung" trạng thái khi dừng cuộn đúng ngưỡng. */
 const TIMED_LOGO_HYSTERESIS_PX = 16;
 
 type TimedLogoState = "before" | "rest" | "after";
 
 export interface MorphPinOptions {
-  /**
-   * Phương án A — mobile (cảm ứng / < 768px): bỏ ghim + thu nhỏ ảnh, ảnh nằm
-   * trong luồng trang, chữ đi ngay dưới ảnh. Desktop giữ nguyên ghim.
-   * CSS bật theo `[data-morph-pin-flow-mobile]` + media query cùng điều kiện.
-   */
-  flowOnMobile?: boolean;
   /**
    * Phương án B — logo brand-break kích hoạt theo vị trí cuộn nhưng chạy theo
    * thời gian cố định (CSS transition, `[data-logo-mode="timed"]`): vuốt nhanh
@@ -208,7 +196,6 @@ export function useMorphPinScroll(
   sectionId: string,
   options: MorphPinOptions = {},
 ) {
-  const flowOnMobile = options.flowOnMobile ?? false;
   const timedLogo = options.timedLogo ?? false;
   const rootRef = useRef<HTMLDivElement>(null);
   const frozenTopRef = useRef<number | null>(null);
@@ -294,8 +281,6 @@ export function useMorphPinScroll(
       CSS.supports("animation-timeline: view()");
     let sdaActive = false;
     let sdaVerified = false;
-    /* Phương án A: mobile không ghim — cùng điều kiện với media query CSS. */
-    let flowMode = flowOnMobile && coarse;
     /* Phương án B: trạng thái logo + tắt transition ở lần đồng bộ đầu (tải
        trang giữa chừng không bay logo qua màn hình). */
     let logoState: TimedLogoState = "before";
@@ -310,7 +295,7 @@ export function useMorphPinScroll(
       });
     }
     const applySdaMode = () => {
-      const next = sdaSupported && coarse && !flowMode;
+      const next = sdaSupported && coarse;
       sdaActive = next;
       sdaVerified = false;
       if (next) root.dataset.morphPinSda = "on";
@@ -324,8 +309,7 @@ export function useMorphPinScroll(
       stableViewportHeight = coarse ? getStableViewportHeight() : 0;
       headerHeight = getHeaderOffset();
       geometry = null;
-      flowMode = flowOnMobile && coarse;
-      if (sdaActive !== (sdaSupported && coarse && !flowMode)) applySdaMode();
+      if (sdaActive !== (sdaSupported && coarse)) applySdaMode();
     };
 
     const updateTimedLogo = (raw: number, enterAt: number, exitAt: number) => {
@@ -340,78 +324,6 @@ export function useMorphPinScroll(
       const legacy = next === "before" ? "waiting" : "rest";
       if (root.dataset.brandBreakLogo !== legacy) {
         root.dataset.brandBreakLogo = legacy;
-      }
-    };
-
-    /* Phương án A (mobile): không ghim, không thu nhỏ — chỉ cập nhật tỷ lệ
-       khung ảnh + logo đỏ bám theo vị trí ảnh. */
-    const syncFlow = () => {
-      if (root.dataset.morphPinPhase !== "static") {
-        root.dataset.morphPinPhase = "static";
-      }
-      for (const el of imageEls) {
-        const image = el.querySelector("img");
-        if (image && image.naturalWidth > 0 && image.naturalHeight > 0) {
-          setCssVar(
-            el,
-            "--about-flow-ratio",
-            `${image.naturalWidth} / ${image.naturalHeight}`,
-          );
-        }
-      }
-      for (const el of contentEls) {
-        setCssVar(el, "--morph-pin-content-shift", "0px");
-      }
-      if (!logoEl || !root.hasAttribute("data-brand-break")) return;
-      const image = imageEls[0];
-      if (!image) return;
-      const rect = image.getBoundingClientRect();
-      const vh =
-        stableViewportHeight > 0 ? stableViewportHeight : window.innerHeight;
-      if (vh <= 0) return;
-      const center = (rect.top + rect.height / 2) / vh;
-      if (timedLogo) {
-        /* Kết hợp A + B: ngưỡng theo tâm ảnh (đổi dấu để tăng khi cuộn xuống). */
-        updateTimedLogo(
-          -center * vh,
-          -FLOW_ENTER_END * vh,
-          -FLOW_EXIT_START * vh,
-        );
-        return;
-      }
-      const pEnter = clamp01(
-        (FLOW_ENTER_START - center) / (FLOW_ENTER_START - FLOW_ENTER_END),
-      );
-      const pExit = clamp01(
-        (FLOW_EXIT_START - center) / (FLOW_EXIT_START - FLOW_EXIT_END),
-      );
-      const vw = window.visualViewport?.width ?? window.innerWidth;
-      const enterStagger = token("--brand-break-enter-stagger", 0.12);
-      const enterFinish = token("--brand-break-enter-finish", 1);
-      const exitStagger = token("--brand-break-exit-stagger", 0.1);
-      const exitFinish = token("--brand-break-exit-finish", 1);
-      setCssVar(logoEl, "--morph-pin-letter-x", letterExitPx(pExit, vw));
-      for (const [i, id] of (["top", "mid", "bot"] as const).entries()) {
-        setCssVar(
-          logoEl,
-          `--morph-pin-enter-x-${id}`,
-          enterOffsetPx(
-            staggerLetterExitProgress(pEnter, i, enterStagger, enterFinish),
-            vw,
-          ),
-        );
-        setCssVar(
-          logoEl,
-          `--morph-pin-letter-x-${id}`,
-          letterExitPx(
-            staggerLetterExitProgress(pExit, i, exitStagger, exitFinish),
-            vw,
-          ),
-        );
-      }
-      const nextLogo = pEnter >= 1 ? "rest" : "waiting";
-      if (root.dataset.brandBreakLogo !== nextLogo) {
-        root.dataset.brandBreakLogo = nextLogo;
       }
     };
 
@@ -437,10 +349,6 @@ export function useMorphPinScroll(
     };
 
     const sync = () => {
-      if (flowMode) {
-        syncFlow();
-        return;
-      }
       const vvhSlack = Math.max(1, token("--morph-pin-vvh-slack", 48));
       const headerOffset = headerHeight;
       /* Touch: dùng viewport ổn định (không co theo visualViewport) — khớp
@@ -829,7 +737,7 @@ export function useMorphPinScroll(
       if (frame) cancelAnimationFrame(frame);
       if (touchEndFrame) cancelAnimationFrame(touchEndFrame);
     };
-  }, [enabled, flowOnMobile, timedLogo]);
+  }, [enabled, timedLogo]);
 
   return rootRef;
 }
