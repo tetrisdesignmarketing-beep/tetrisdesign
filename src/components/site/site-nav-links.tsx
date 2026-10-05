@@ -1,5 +1,6 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSiteLoading } from "@/components/site/site-loading-context";
@@ -36,18 +37,23 @@ export function SiteNavLinks({
       <ul
         className={cn(
           "flex flex-col items-center lg:flex-row",
-          menuPhase !== undefined ? "gap-0" : "gap-8 lg:gap-8",
+          menuPhase !== undefined ? "gap-0" : "gap-8 lg:gap-5 xl:gap-8",
         )}
       >
-        {siteNav.map((item) => {
+        {siteNav.map((item, index) => {
           const isAdminLink = item.href.startsWith("/admin");
+          /* Khớp đúng đoạn path: /about không sáng khi đang ở /about1. */
           const isActive =
             item.href === "/"
               ? pathname === "/"
-              : pathname.startsWith(item.href);
+              : pathname === item.href ||
+                pathname.startsWith(`${item.href}/`);
 
           return (
-            <li key={item.href}>
+            <li
+              key={item.href}
+              style={{ "--menu-i": index } as CSSProperties}
+            >
               <Link
                 href={item.href}
                 prefetch={!isActive && !isAdminLink}
@@ -62,7 +68,7 @@ export function SiteNavLinks({
                 }
                 className={cn(
                   menuPhase === undefined &&
-                    "site-label-text uppercase tracking-[0.2em] transition-colors",
+                    "site-label-text whitespace-nowrap uppercase tracking-[0.2em] transition-colors",
                   isActive && menuPhase === undefined
                     ? inverted
                       ? "text-white"

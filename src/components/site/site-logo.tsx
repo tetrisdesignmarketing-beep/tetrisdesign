@@ -15,8 +15,11 @@ export function SiteLogo({ className, inverted, prefetch = true }: SiteLogoProps
       href="/"
       prefetch={prefetch}
       aria-label={siteBrand.name}
+      /* Màu logo do `.site-header-logo-mark` (globals.css) quyết định theo
+         trạng thái header — xem ghi chú iOS Safari ở đó. */
+      data-inverted={inverted ? "" : undefined}
       className={cn(
-        "site-header-logo text-foreground transition-colors duration-300 motion-reduce:transition-none",
+        "site-header-logo text-foreground",
         inverted && "text-white",
         className,
       )}

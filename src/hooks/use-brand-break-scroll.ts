@@ -1,14 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useMorphPinScroll } from "@/hooks/use-morph-pin-scroll";
+import {
+  useMorphPinScroll,
+  type MorphPinOptions,
+} from "@/hooks/use-morph-pin-scroll";
 
 const SECTION_ID = "about-brand-break";
 
 export type BrandBreakLogoPhase = "waiting" | "rest";
 
-export function useBrandBreakScroll() {
-  return useMorphPinScroll(SECTION_ID);
+export function useBrandBreakScroll(options?: MorphPinOptions) {
+  return useMorphPinScroll(SECTION_ID, options);
 }
 
 /**

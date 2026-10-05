@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { ProjectDetailLightbox } from "@/components/site/project-detail-lightbox";
@@ -42,6 +48,14 @@ export function ProjectDetailImages({
   className,
 }: ProjectDetailImagesProps) {
   const rootRef = useRef<HTMLElement>(null);
+  /* Ô ảnh trong lưới — để ảnh lightbox bay ra/về đúng chỗ (kiểu iOS). */
+  const getOriginElement = useCallback(
+    (index: number) =>
+      rootRef.current?.querySelectorAll<HTMLElement>("[data-detail-imgwrap]")[
+        index
+      ] ?? null,
+    [],
+  );
   const reduced = usePrefersReducedMotion();
   const [viewportWidth, setViewportWidth] = useState(0);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
@@ -241,6 +255,7 @@ export function ProjectDetailImages({
         title={title}
         index={lightboxIndex}
         onClose={() => setLightboxIndex(null)}
+        getOriginElement={getOriginElement}
       />
     </section>
   );

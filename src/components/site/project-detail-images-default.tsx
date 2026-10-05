@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useMemo, useState, type CSSProperties } from "react";
+import {
+  useCallback,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import { ProjectDetailLightbox } from "@/components/site/project-detail-lightbox";
 import { ProgressiveImage } from "@/components/site/progressive-image";
 import type { MediaDimensions } from "@/lib/media-dimensions";
@@ -44,6 +50,12 @@ export function ProjectDetailImagesDefault({
   className,
 }: ProjectDetailImagesDefaultProps) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  /* Nút ảnh theo thứ tự lightbox — để ảnh bay ra/về đúng ô (kiểu iOS). */
+  const triggerRefs = useRef(new Map<number, HTMLElement>());
+  const getOriginElement = useCallback(
+    (index: number) => triggerRefs.current.get(index) ?? null,
+    [],
+  );
   /* Tỷ lệ đo được ở trình duyệt cho ảnh không có trong Media (theo vị trí). */
   const [measured, setMeasured] = useState<Record<number, number>>({});
 
@@ -120,6 +132,10 @@ export function ProjectDetailImagesDefault({
         }
       >
         <button
+          ref={(el) => {
+            if (el) triggerRefs.current.set(displayIndex, el);
+            else triggerRefs.current.delete(displayIndex);
+          }}
           type="button"
           className="project-detail-images-default__trigger"
           onClick={() => setLightboxIndex(displayIndex)}
@@ -171,6 +187,8 @@ export function ProjectDetailImagesDefault({
         title={title}
         index={lightboxIndex}
         onClose={() => setLightboxIndex(null)}
+        getOriginElement={getOriginElement}
+        scrollOriginIntoView
       />
     </section>
   );

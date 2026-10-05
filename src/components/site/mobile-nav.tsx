@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  type CSSProperties,
   useCallback,
   useEffect,
   useRef,
@@ -9,19 +10,47 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { SiteNavLinks, type MobileMenuPhase } from "@/components/site/site-nav-links";
+import { siteNav } from "@/lib/site-content";
 import { cn } from "@/lib/utils";
 
-/** Chrome (logo/icon/header) trước, panel opaque, rồi links stagger */
-export const MENU_CHROME_MS = 300;
+/*
+ * Timeline menu mobile (nguồn duy nhất — CSS đọc qua biến `--menu-*` gắn trên panel):
+ * Mở:  panel "mọc" từ đáy header xuống hết màn hình (clip-path, 0 → full),
+ *      các mục menu hiện dần lần lượt khi panel đã mở được một đoạn.
+ * Đóng: các mục mờ đi trước, rồi panel "thu" ngược lên về 0.
+ */
+export const MENU_PANEL_OPEN_MS = 500;
+export const MENU_PANEL_CLOSE_MS = 400;
+/** Chờ các mục menu mờ bớt rồi mới thu panel. */
+export const MENU_PANEL_CLOSE_DELAY_MS = 100;
+/** Mục đầu tiên bắt đầu hiện khi panel đã mở được khoảng 1/3. */
+export const MENU_LINKS_OPEN_DELAY_MS = 150;
 export const MENU_LINK_STAGGER_MS = 50;
 export const MENU_LINK_ANIM_MS = 300;
-export const MENU_LINKS_CLOSE_MS = 180;
+export const MENU_LINKS_CLOSE_MS = 150;
+/** Số mục menu (stagger theo `--menu-i`). */
+const MENU_LINK_STAGGER_SLOTS = siteNav.length;
 
-export const MENU_OPEN_SEQUENCE_MS =
-  MENU_CHROME_MS + MENU_LINK_ANIM_MS + 5 * MENU_LINK_STAGGER_MS;
+export const MENU_OPEN_SEQUENCE_MS = Math.max(
+  MENU_PANEL_OPEN_MS,
+  MENU_LINKS_OPEN_DELAY_MS +
+    MENU_LINK_ANIM_MS +
+    (MENU_LINK_STAGGER_SLOTS - 1) * MENU_LINK_STAGGER_MS,
+);
 
-/** Panel giữ opaque đến hết — tránh carousel flash khi chrome revert (P2 #9) */
-export const MENU_CLOSE_SEQUENCE_MS = MENU_LINKS_CLOSE_MS + MENU_CHROME_MS;
+/** Header giữ nền đặc tới khi panel thu xong — tránh lộ carousel giữa chừng. */
+export const MENU_CLOSE_SEQUENCE_MS =
+  MENU_PANEL_CLOSE_DELAY_MS + MENU_PANEL_CLOSE_MS;
+
+const MENU_TIMING_STYLE = {
+  "--menu-panel-open-ms": `${MENU_PANEL_OPEN_MS}ms`,
+  "--menu-panel-close-ms": `${MENU_PANEL_CLOSE_MS}ms`,
+  "--menu-panel-close-delay": `${MENU_PANEL_CLOSE_DELAY_MS}ms`,
+  "--menu-links-open-delay": `${MENU_LINKS_OPEN_DELAY_MS}ms`,
+  "--menu-link-stagger": `${MENU_LINK_STAGGER_MS}ms`,
+  "--menu-link-anim-ms": `${MENU_LINK_ANIM_MS}ms`,
+  "--menu-links-close-ms": `${MENU_LINKS_CLOSE_MS}ms`,
+} as CSSProperties;
 
 const FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -105,6 +134,10 @@ export function MobileNav({
   const phaseRef = useRef<MobileMenuPhase>("closed");
   const lastToggleAtRef = useRef(0);
   const tapStartRef = useRef<{ x: number; y: number; at: number } | null>(null);
+  /* Người dùng đang thao tác bằng bàn phím (Tab/Enter) hay chạm/chuột.
+     Chỉ chuyển focus bằng script khi dùng bàn phím: iOS Safari coi `focus()`
+     sau một cú chạm là `:focus-visible` → hiện viền đen quanh nút X. */
+  const keyboardModalityRef = useRef(false);
   const [phase, setPhase] = useState<MobileMenuPhase>("closed");
   const mounted = useSyncExternalStore(
     subscribeNever,
@@ -150,6 +183,27 @@ export function MobileNav({
   useEffect(() => {
     phaseRef.current = phase;
   }, [phase]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      keyboardModalityRef.current = true;
+    };
+    const onPointer = () => {
+      keyboardModalityRef.current = false;
+    };
+    window.addEventListener("keydown", onKeyDown, true);
+    window.addEventListener("pointerdown", onPointer, true);
+    window.addEventListener("touchstart", onPointer, {
+      capture: true,
+      passive: true,
+    });
+    return () => {
+      window.removeEventListener("keydown", onKeyDown, true);
+      window.removeEventListener("pointerdown", onPointer, true);
+      window.removeEventListener("touchstart", onPointer, true);
+    };
+  }, []);
 
   /* Fallback theo toạ độ: iOS/Safari có lúc không giao click cho nút trong header
      fixed (layer carousel `-webkit-overflow-scrolling`). Listener ở document vẫn
@@ -272,7 +326,9 @@ export function MobileNav({
       if (event.key !== "Tab") return;
 
       const focusables: HTMLElement[] = [];
-      if (toggleRef.current) focusables.push(toggleRef.current);
+      /* Khi menu mở, nút hamburger bị ẩn (display:none) — nút X mới là phần tử
+         focus được trong header. */
+      if (closeToggleRef.current) focusables.push(closeToggleRef.current);
       if (panelRef.current) {
         panelRef.current
           .querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
@@ -304,14 +360,34 @@ export function MobileNav({
 
   useEffect(() => {
     if (phase !== "open") return;
-    closeToggleRef.current?.focus();
+    if (keyboardModalityRef.current) {
+      closeToggleRef.current?.focus();
+      return;
+    }
+    /* Chạm/chuột: focus vào chính dialog (không có viền) để trình đọc màn hình
+       vẫn vào đúng menu, thay vì focus nút X (Safari sẽ vẽ viền). */
+    panelRef.current?.focus({ preventScroll: true });
   }, [phase]);
 
   useEffect(() => {
     if (phase !== "closed") return;
     const target = previousFocusRef.current;
     previousFocusRef.current = null;
-    if (target?.isConnected) target.focus();
+    if (!target?.isConnected) return;
+    if (keyboardModalityRef.current) {
+      target.focus();
+      return;
+    }
+    /* Chạm/chuột: không trả focus về nút hamburger (tránh viền), chỉ bỏ focus
+       khỏi phần tử vừa bị ẩn trong panel. */
+    const active = document.activeElement as HTMLElement | null;
+    if (
+      active &&
+      (active === closeToggleRef.current ||
+        panelRef.current?.contains(active))
+    ) {
+      active.blur();
+    }
   }, [phase]);
 
   const barClass = (extra: string) =>
@@ -328,8 +404,10 @@ export function MobileNav({
       role="dialog"
       aria-modal="true"
       aria-label="Menu điều hướng"
+      tabIndex={-1}
       data-phase={phase}
       className="mobile-menu-panel"
+      style={MENU_TIMING_STYLE}
     >
       <div className="mobile-menu-panel-inner">
         <SiteNavLinks menuPhase={phase} onNavigate={closeMenu} />

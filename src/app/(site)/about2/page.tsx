@@ -2,10 +2,12 @@ import { AboutPageView } from "@/components/site/about-page-view";
 import { createPageMetadata } from "@/lib/site-metadata";
 
 export const metadata = createPageMetadata({
-  title: "Giới thiệu",
+  title: "Giới thiệu 2",
   description:
     "Giới thiệu Tetris Design — công ty thiết kế và thi công nội thất thương mại tại Hà Nội, thành lập 2018.",
-  path: "/about",
+  path: "/about2",
+  /* Trang so sánh nội bộ — không lập chỉ mục, không có trong menu/sitemap. */
+  noIndex: true,
 });
 
 /**
@@ -16,6 +18,7 @@ export const metadata = createPageMetadata({
  */
 export const revalidate = 3600;
 
-export default function AboutPage() {
-  return <AboutPageView variant="pin" />;
+/** Phương án B — logo kích hoạt theo vị trí, chạy theo thời gian (so sánh với /about). */
+export default function About2Page() {
+  return <AboutPageView variant="timed-logo" />;
 }

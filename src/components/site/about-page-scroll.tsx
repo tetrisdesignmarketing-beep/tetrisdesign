@@ -9,10 +9,17 @@ import type {
   AboutPageContent,
   ContactPageContent,
 } from "@/lib/validations/site-page";
+import type {
+  AboutImageRatios,
+  AboutScrollVariant,
+} from "@/lib/about-variant";
 
 interface AboutPageScrollProps {
   content: AboutPageContent;
   contact?: ContactPageContent;
+  /** Biến thể cuộn — xem lib/about-variant.ts (mặc định = hiện tại). */
+  variant?: AboutScrollVariant;
+  imageRatios?: AboutImageRatios;
 }
 
 /**
@@ -21,10 +28,20 @@ interface AboutPageScrollProps {
  * Không thêm scroll-snap cho trang này: snap sẽ dừng cuộn giữa chừng và xung
  * đột với animation morph-pin đang chạy liên tục theo vị trí cuộn.
  */
-export function AboutPageScroll({ content, contact }: AboutPageScrollProps) {
+export function AboutPageScroll({
+  content,
+  contact,
+  variant = "pin",
+  imageRatios,
+}: AboutPageScrollProps) {
   return (
     <>
-      <AboutHeroSection src={content.heroImage} alt="Đội ngũ Tetris Design">
+      <AboutHeroSection
+        src={content.heroImage}
+        alt="Đội ngũ Tetris Design"
+        variant={variant}
+        imageRatio={imageRatios?.hero}
+      >
         <div className="mx-auto max-w-3xl px-[var(--site-header-pad-inline)]">
           <ContentSection
             title={content.introduction.title}
@@ -50,6 +67,8 @@ export function AboutPageScroll({ content, contact }: AboutPageScrollProps) {
         partnersTitle={content.partners.title}
         partners={content.partners.items}
         contact={contact}
+        variant={variant}
+        imageRatio={imageRatios?.brandBreak}
       />
     </>
   );

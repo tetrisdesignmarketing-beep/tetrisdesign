@@ -106,6 +106,11 @@
   color: #fff;
 }
 
+.site-header[data-home-overlay] .site-header-logo-mark,
+.site-header-logo[data-inverted] .site-header-logo-mark {
+  background-color: #fff;
+}
+
 .site-header[data-home-overlay] .site-header-menu-toggle > span:not(.sr-only) {
   background-color: #fff;
 }
@@ -305,11 +310,24 @@ a.contact-info-value:hover {
   display: block;
   height: var(--site-header-logo-height);
   aspect-ratio: 5940 / 1146;
-  background-color: currentColor;
+  /*
+   * Màu đặt TRỰC TIẾP lên phần tử có mask (không dùng `currentColor` kế thừa từ
+   * thẻ <a>): iOS Safari không vẽ lại phần tử mask khi chỉ màu chữ của cha đổi
+   * → logo kẹt màu cũ (đen) trong khi icon menu đã trắng. Đổi chính
+   * background-color của phần tử thì Safari luôn repaint.
+   */
+  background-color: var(--foreground);
+  transition: background-color 300ms ease;
   -webkit-mask: url("/textLogo.svg") center / contain no-repeat;
   mask: url("/textLogo.svg") center / contain no-repeat;
   -webkit-mask-mode: alpha;
   mask-mode: alpha;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-header-logo-mark {
+    transition: none;
+  }
 }
 
 .site-header-menu-toggle {
@@ -363,6 +381,11 @@ html:has(#site-mobile-menu:target) .site-header {
 .site-header[data-menu="open"] .site-header-logo,
 html:has(#site-mobile-menu:target) .site-header-logo {
   color: var(--foreground);
+}
+
+.site-header[data-menu="open"] .site-header-logo-mark,
+html:has(#site-mobile-menu:target) .site-header-logo-mark {
+  background-color: var(--foreground);
 }
 
 .site-header[data-menu="open"] .site-header-menu-toggle > span:not(.sr-only),
@@ -1325,6 +1348,45 @@ html:has([data-full-page-scroll-active]) main {
   margin-top: min(0px, var(--morph-pin-content-shift, 0px));
 }
 
+/*
+  Phương án A (/about1) — mobile: bỏ ghim + thu nhỏ, ảnh nằm trong luồng trang.
+  Khung ảnh đúng tỷ lệ ảnh (--about-flow-ratio: server biết trước từ DB, JS đo
+  lại khi ảnh tải) → không còn khung cao 1 màn hình trắng phía dưới ảnh.
+  Cùng điều kiện media với isCoarsePointer() trong use-morph-pin-scroll.ts.
+*/
+@media (pointer: coarse), (max-width: 767px) {
+  [data-morph-pin-flow-mobile] [data-morph-pin-track] {
+    height: auto;
+  }
+
+  [data-morph-pin-flow-mobile] [data-morph-pin-pin] {
+    position: relative;
+    top: auto;
+    height: auto;
+    overflow: visible;
+  }
+
+  [data-morph-pin-flow-mobile] [data-morph-pin-image] {
+    flex: none;
+    height: auto;
+    aspect-ratio: var(--about-flow-ratio, 3 / 2);
+    transform: none;
+    animation: none;
+    will-change: auto;
+  }
+
+  [data-morph-pin-flow-mobile] [data-morph-pin-content] {
+    transform: none;
+    margin-top: 0;
+    will-change: auto;
+  }
+
+  /* Ảnh có p-4 (16px) → chữ cách ảnh ~40px */
+  [data-about-hero-morph][data-morph-pin-flow-mobile] [data-morph-pin-content] {
+    padding-top: 1.5rem;
+  }
+}
+
 [data-logo-component] {
   position: absolute;
   left: 50%;
@@ -1408,7 +1470,67 @@ html:has([data-full-page-scroll-active]) main {
   );
 }
 
+/*
+  Phương án B (/about2) — logo kích hoạt theo vị trí, chạy theo THỜI GIAN:
+  JS (use-morph-pin-scroll.ts) chỉ đặt data-logo-state = before | rest | after;
+  chuyển động là CSS transition cố định → vuốt nhanh hay chậm vẫn chạy đủ.
+  before: khối nằm ngoài bên phải · rest: đứng yên đúng chỗ · after: mặt khối
+  trượt ra bên trái. Đi ngược lại thì chạy ngược (đối xứng).
+*/
+[data-brand-break][data-logo-mode="timed"] {
+  /* Quãng logo đứng yên khi ảnh đã ghim (thay cho quãng "enter" bám cuộn) */
+  --brand-break-enter-ratio: 0.4;
+  /* Vào sớm hơn điểm ghim 20% màn hình — ảnh đã hiện gần hết */
+  --brand-break-timed-enter-lead: 0.2;
+  --brand-break-timed-ms: 700ms;
+}
+
+[data-brand-break][data-logo-mode="timed"] [data-logo-block] {
+  --logo-timed-delay: 0ms;
+  transform: translate3d(100vw, 0, 0);
+  transition: transform var(--brand-break-timed-ms, 700ms)
+    cubic-bezier(0.22, 1, 0.36, 1) var(--logo-timed-delay);
+}
+
+[data-brand-break][data-logo-mode="timed"] [data-logo-block="mid"] {
+  --logo-timed-delay: 90ms;
+}
+
+[data-brand-break][data-logo-mode="timed"] [data-logo-block="bot"] {
+  --logo-timed-delay: 180ms;
+}
+
+[data-brand-break][data-logo-mode="timed"][data-logo-state="rest"]
+  [data-logo-block],
+[data-brand-break][data-logo-mode="timed"][data-logo-state="after"]
+  [data-logo-block] {
+  transform: translate3d(0, 0, 0);
+}
+
+[data-brand-break][data-logo-mode="timed"] [data-logo-block-face] {
+  transform: translate3d(0, 0, 0);
+  transition: transform var(--brand-break-timed-ms, 700ms)
+    cubic-bezier(0.65, 0, 0.35, 1) var(--logo-timed-delay, 0ms);
+}
+
+[data-brand-break][data-logo-mode="timed"][data-logo-state="after"]
+  [data-logo-block-face] {
+  transform: translate3d(-100vw, 0, 0);
+}
+
+/* Tải trang giữa chừng: nhảy thẳng tới trạng thái đúng, không bay qua màn hình */
+[data-brand-break][data-logo-instant] [data-logo-block],
+[data-brand-break][data-logo-instant] [data-logo-block-face] {
+  transition: none !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  [data-brand-break][data-logo-mode="timed"] [data-logo-block],
+  [data-brand-break][data-logo-mode="timed"] [data-logo-block-face] {
+    transform: none !important;
+    transition: none !important;
+  }
+
   [data-logo-block] {
     transform: none;
     will-change: auto;
@@ -1543,7 +1665,15 @@ html:has(#hero-carousel) body {
   }
 }
 
-/* Mobile menu — panel opaque; chỉ animate links (P0 readability) */
+/*
+ * Mobile menu — panel "mọc" từ đáy header xuống (chiều cao 0 → full màn hình).
+ * Dùng clip-path thay vì animate `height`: height đổi mỗi frame bắt trình duyệt
+ * tính lại layout cả panel (giật trên mobile); clip-path chỉ cắt vùng hiển thị,
+ * panel luôn full size nên chữ không bị co/giãn và animation mượt.
+ * Panel không dùng `display: none` khi đóng: chuyển từ display:none thì transition
+ * không chạy được (không có trạng thái bắt đầu). Ẩn bằng visibility + clip 100%.
+ * Thời lượng lấy từ biến `--menu-*` do mobile-nav.tsx gắn (đồng bộ timer JS).
+ */
 .mobile-menu-panel {
   position: fixed;
   inset-inline: 0;
@@ -1558,24 +1688,33 @@ html:has(#hero-carousel) body {
   pointer-events: none;
   overflow-x: clip;
   overflow-y: auto;
+  /* Đóng: cắt hết từ dưới lên → chiều cao hiển thị = 0, mép trên dính đáy header */
+  clip-path: inset(0 0 100% 0);
+  transition: none;
 }
 
-.mobile-menu-panel[data-phase="closed"] {
-  display: none;
+.mobile-menu-panel:focus {
+  outline: none;
 }
 
 .mobile-menu-panel[data-phase="opening"],
 .mobile-menu-panel[data-phase="open"],
-.mobile-menu-panel[data-phase="closing"],
 #site-mobile-menu:target {
-  display: block;
   visibility: visible;
   pointer-events: auto;
+  clip-path: inset(0 0 0 0);
+  /* Mở: nhanh lúc đầu, hãm êm khi chạm đáy màn hình */
+  transition: clip-path var(--menu-panel-open-ms, 500ms)
+    cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 .mobile-menu-panel[data-phase="closing"] {
   visibility: visible;
   pointer-events: none;
+  clip-path: inset(0 0 100% 0);
+  /* Đóng: chờ chữ mờ bớt rồi thu panel lên, tăng/giảm tốc đều hai đầu */
+  transition: clip-path var(--menu-panel-close-ms, 400ms)
+    cubic-bezier(0.65, 0, 0.35, 1) var(--menu-panel-close-delay, 100ms);
 }
 
 .mobile-menu-panel-inner {
@@ -1627,8 +1766,8 @@ html:has(#hero-carousel) body {
   opacity: 0;
   transform: translateY(0.5rem);
   transition:
-    opacity 300ms cubic-bezier(0.22, 1, 0.36, 1),
-    transform 300ms cubic-bezier(0.22, 1, 0.36, 1);
+    opacity var(--menu-link-anim-ms, 300ms) cubic-bezier(0.22, 1, 0.36, 1),
+    transform var(--menu-link-anim-ms, 300ms) cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .mobile-menu-links[data-phase="opening"] li,
@@ -1640,23 +1779,12 @@ html:has(#hero-carousel) body {
   transform: translateY(0);
 }
 
-.mobile-menu-links[data-phase="opening"] li:nth-child(1) {
-  transition-delay: 0ms;
-}
-.mobile-menu-links[data-phase="opening"] li:nth-child(2) {
-  transition-delay: 50ms;
-}
-.mobile-menu-links[data-phase="opening"] li:nth-child(3) {
-  transition-delay: 100ms;
-}
-.mobile-menu-links[data-phase="opening"] li:nth-child(4) {
-  transition-delay: 150ms;
-}
-.mobile-menu-links[data-phase="opening"] li:nth-child(5) {
-  transition-delay: 200ms;
-}
-.mobile-menu-links[data-phase="opening"] li:nth-child(6) {
-  transition-delay: 250ms;
+.mobile-menu-links[data-phase="opening"] li {
+  /* --menu-i = thứ tự mục (site-nav-links.tsx) → stagger cho bất kỳ số mục */
+  transition-delay: calc(
+    var(--menu-links-open-delay, 150ms) +
+      var(--menu-link-stagger, 50ms) * var(--menu-i, 0)
+  );
 }
 
 .mobile-menu-links[data-phase="open"] li {
@@ -1668,14 +1796,26 @@ html:has(#hero-carousel) body {
   opacity: 0;
   transform: translateY(0.25rem);
   transition-delay: 0ms;
-  transition-duration: 180ms;
+  transition-duration: var(--menu-links-close-ms, 150ms);
 }
 
 .mobile-menu-links a:hover {
   color: var(--brand-red);
 }
 
+@media (min-width: 1024px) {
+  /* Desktop dùng nav ngang — panel mobile (portal ra body) không cần tồn tại */
+  .mobile-menu-panel {
+    display: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .mobile-menu-panel,
+  .mobile-menu-panel[data-phase] {
+    transition: none !important;
+  }
+
   .mobile-menu-links li {
     transition: none !important;
     transition-delay: 0ms !important;
@@ -2470,10 +2610,40 @@ ul:has(.project-card-hover-scale) {
   inset: 0;
   /* Trên header/menu/loading — --site-lightbox-z */
   z-index: var(--site-lightbox-z);
-  display: grid;
-  place-items: center;
-  background: #000;
   color: #fff;
+}
+
+/* Nền đen tách lớp riêng để mờ dần khi mở/đóng/kéo (project-detail-lightbox.tsx) */
+.project-detail-lightbox__backdrop {
+  position: absolute;
+  inset: 0;
+  background: #000;
+}
+
+/* Khung ảnh: vị trí/kích thước do JS tính (vừa khít màn hình theo tỷ lệ ảnh);
+   bay ra/về bằng transform + clip-path (Web Animations API). */
+.project-detail-lightbox__frame {
+  position: absolute;
+  overflow: hidden;
+  transform-origin: 50% 50%;
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+/* Nút đóng / mũi tên / số đếm — hiện sau ảnh khi mở, ẩn trước khi đóng */
+.project-detail-lightbox__chrome {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.project-detail-lightbox__chrome > :where(button) {
+  pointer-events: auto;
+}
+
+.project-detail-lightbox[data-phase="closing"] {
+  pointer-events: none;
 }
 
 /* Khi lightbox mở: khóa header + toggle (toggle tự `pointer-events: auto`
@@ -2484,11 +2654,10 @@ html[data-lightbox-open] .site-header-menu-toggle {
 }
 
 .project-detail-lightbox__stage {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  min-height: 0;
-  touch-action: pan-y;
+  position: absolute;
+  inset: 0;
+  /* JS tự xử lý vuốt ngang (đổi ảnh) + vuốt xuống (đóng) */
+  touch-action: none;
 }
 
 .project-detail-lightbox__count {
