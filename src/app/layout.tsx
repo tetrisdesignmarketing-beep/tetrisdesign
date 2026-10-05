@@ -42,10 +42,9 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
   },
-  icons: {
-    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
-    apple: [{ url: "/icon.svg", type: "image/svg+xml" }],
-  },
+  /* Icon theo file convention của Next (src/app): favicon.ico (16/32/48 —
+     Google Search đọc file này), icon.svg, apple-icon.png. Sinh lại bằng
+     `node scripts/generate-icons.mjs` khi đổi logo. */
 };
 
 export default function RootLayout({
