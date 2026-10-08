@@ -314,7 +314,23 @@ export function ProgressiveImage({
       aria-hidden={fullReady ? undefined : true}
       draggable={false}
       decoding="async"
-      onLoad={() => setFullReady(true)}
+      onLoad={(event) => {
+        /* Giải mã ảnh lớn TRƯỚC khi hiện lớp nét: nếu không, trình duyệt giải
+           mã đúng lúc lớp nét mờ dần vào (thường giữa lúc đang cuộn) → khựng
+           1 nhịp, rõ trên iPhone. decode() chạy ngoài luồng chính. */
+        const img = event.currentTarget;
+        const loadedSrc = img.currentSrc || img.src;
+        const reveal = () => {
+          if (!img.isConnected) return;
+          if ((img.currentSrc || img.src) !== loadedSrc) return;
+          setFullReady(true);
+        };
+        if (typeof img.decode === "function") {
+          img.decode().then(reveal, reveal);
+        } else {
+          reveal();
+        }
+      }}
       onError={() => {
         if (fullSrc !== original) setFullSrc(original);
       }}

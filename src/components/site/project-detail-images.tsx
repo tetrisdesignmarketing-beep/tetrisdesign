@@ -12,6 +12,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { ProjectDetailLightbox } from "@/components/site/project-detail-lightbox";
 import { ProgressiveImage } from "@/components/site/progressive-image";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
+import { onWidthResize } from "@/lib/scroll-trigger-resize";
 import {
   HOME_CARD_FULL_WIDTH,
   HOME_CARD_PREVIEW_WIDTH,
@@ -72,6 +73,8 @@ export function ProjectDetailImages({
     if (!root || reduced || images.length === 0) return;
 
     gsap.registerPlugin(ScrollTrigger);
+    /* iPhone: thanh địa chỉ thu/giãn khi cuộn không được làm GSAP đo lại trang. */
+    ScrollTrigger.config({ ignoreMobileResize: true });
 
     const ctx = gsap.context(() => {
       const grid = root.querySelector<HTMLElement>("[data-detail-grid]");
@@ -81,7 +84,9 @@ export function ProjectDetailImages({
       const wraps = root.querySelectorAll<HTMLElement>("[data-detail-imgwrap]");
 
       wraps.forEach((imageWrap) => {
-        const fxEl = imageWrap.querySelector<HTMLElement>("[data-detail-fx]");
+        const shadeEl = imageWrap.querySelector<HTMLElement>(
+          "[data-detail-shade]",
+        );
         const imgEl = imageWrap.querySelector<HTMLElement>("[data-detail-img]");
         const left = isLeftOfViewport(imageWrap);
 
@@ -128,25 +133,19 @@ export function ProjectDetailImages({
           duration: 1,
         });
 
-        /* filter tách sang [data-detail-fx] — tránh 3D + filter cùng node gây lệch */
-        if (fxEl) {
+        /* Tối dần khi vào/ra bằng lớp phủ đen + opacity (GPU compositing).
+           Trước đây animate `filter: blur() brightness() contrast()` mỗi khung
+           hình → vẽ lại từng ảnh khi cuộn, nguồn giật chính trên iPhone. */
+        if (shadeEl) {
           timeline.fromTo(
-            fxEl,
-            { filter: "blur(6px) brightness(35%) contrast(160%)" },
-            {
-              filter: "blur(0px) brightness(100%) contrast(100%)",
-              ease: "sine",
-              duration: 1,
-            },
+            shadeEl,
+            { opacity: 0.65 },
+            { opacity: 0, ease: "sine", duration: 1 },
             0,
           );
           timeline.to(
-            fxEl,
-            {
-              filter: "blur(4px) brightness(35%) contrast(180%)",
-              ease: "sine.in",
-              duration: 1,
-            },
+            shadeEl,
+            { opacity: 0.65, ease: "sine.in", duration: 1 },
             ">",
           );
         }
@@ -182,11 +181,11 @@ export function ProjectDetailImages({
 
     const refresh = () => ScrollTrigger.refresh();
     const raf = window.requestAnimationFrame(refresh);
-    window.addEventListener("resize", refresh);
+    const stopWidthResize = onWidthResize(refresh);
 
     return () => {
       window.cancelAnimationFrame(raf);
-      window.removeEventListener("resize", refresh);
+      stopWidthResize();
       ctx.revert();
     };
   }, [images, reduced, viewportWidth]);
@@ -244,6 +243,12 @@ export function ProjectDetailImages({
                     className="site-image--pop-hover object-cover"
                   />
                 </div>
+                {/* Lớp tối mờ dần khi ảnh vào/ra (GSAP opacity) */}
+                <span
+                  data-detail-shade
+                  className="project-detail-grid__shade"
+                  aria-hidden
+                />
               </div>
             </button>
           </figure>

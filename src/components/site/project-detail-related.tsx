@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import Link from "next/link";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { onWidthResize } from "@/lib/scroll-trigger-resize";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { getProjectCover, type SiteProject } from "@/lib/site-content";
 import { cn } from "@/lib/utils";
@@ -97,6 +98,8 @@ export function ProjectDetailRelated({
     if (!root || reduced || items.length === 0) return;
 
     gsap.registerPlugin(ScrollTrigger);
+    /* iPhone: thanh địa chỉ thu/giãn khi cuộn không được làm GSAP đo lại trang. */
+    ScrollTrigger.config({ ignoreMobileResize: true });
 
     const scroller = root.closest<HTMLElement>("[data-fps-inner-scroll]");
     const scrollTrigger = scroller ? { scroller } : {};
@@ -189,7 +192,8 @@ export function ProjectDetailRelated({
 
     const refresh = () => ScrollTrigger.refresh();
     const raf = window.requestAnimationFrame(refresh);
-    window.addEventListener("resize", refresh);
+    /* Chỉ refresh khi chiều rộng đổi (xoay máy) — không theo thanh địa chỉ. */
+    const stopWidthResize = onWidthResize(refresh);
 
     /* Lần đầu vào trang: ảnh gallery phía trên (height:auto) còn đang tải nên
        trang ngắn hơn thực tế → ScrollTrigger tính điểm start/end quá sớm; tới
@@ -234,7 +238,7 @@ export function ProjectDetailRelated({
 
     return () => {
       window.cancelAnimationFrame(raf);
-      window.removeEventListener("resize", refresh);
+      stopWidthResize();
       window.removeEventListener("load", onWindowLoad);
       window.clearTimeout(layoutTimer);
       layoutObserver?.disconnect();

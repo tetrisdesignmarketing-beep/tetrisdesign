@@ -2598,11 +2598,20 @@ ul:has(.project-card-hover-scale) {
   will-change: transform;
 }
 
-/* Filter tách layer — không cùng node 3D transform → tránh WebKit vẽ lệch */
+/* Lớp chứa ảnh + lớp tối (tách khỏi node 3D transform → tránh WebKit vẽ lệch) */
 .project-detail-grid__fx {
   position: absolute;
   inset: 0;
-  will-change: filter;
+}
+
+/* Tối dần khi ảnh vào/ra — GSAP chỉ đổi opacity (không filter → không vẽ lại ảnh) */
+.project-detail-grid__shade {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+  will-change: opacity;
 }
 
 .project-detail-grid__item:hover {
@@ -2614,8 +2623,8 @@ ul:has(.project-card-hover-scale) {
   cursor: pointer;
 }
 
-.project-detail-grid__imgwrap:hover .project-detail-grid__fx {
-  filter: brightness(1) contrast(1) blur(0) !important;
+.project-detail-grid__imgwrap:hover .project-detail-grid__shade {
+  opacity: 0 !important;
 }
 
 .project-detail-grid__img {
@@ -3039,6 +3048,10 @@ html[data-lightbox-open] .site-header-menu-toggle {
     transform: none !important;
     filter: none !important;
     opacity: 1 !important;
+  }
+
+  .project-detail-grid__shade {
+    opacity: 0 !important;
   }
 }
 
