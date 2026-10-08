@@ -18,6 +18,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ## Design → implementation
 
+- **Design system:** [docs/design/MASTER.md](docs/design/MASTER.md) — màu, chữ, khoảng cách, ảnh, **motion tokens** (`--ease-*`, `--motion-*`), checklist a11y trước khi bàn giao (đọc trước khi sửa UI)
 - Ảnh layout landing: `docs/design/landing/`
 - File phân tích từ mockup: `docs/design/landing/analysis/`
 - Skill phân tích design: `.cursor/skills/analyze-design/` (dùng khi user thêm ảnh hoặc yêu cầu phân tích layout)

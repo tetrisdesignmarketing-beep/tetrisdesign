@@ -1,5 +1,27 @@
 @import "tailwindcss";
 
+/*
+  UX baseline (checklist UI/UX — P1):
+  - Tailwind v4 trả `<button>` về con trỏ mũi tên → mọi thứ bấm được dùng bàn tay.
+  - Viền focus thương hiệu dùng chung (chỉ hiện khi dùng bàn phím: :focus-visible).
+  Đặt trong @layer base: class/rule riêng (vd. con trỏ "mắt" của gallery) vẫn thắng.
+*/
+@layer base {
+  :root {
+    --focus-ring-color: #7a1f27;
+    --focus-ring: 2px solid var(--focus-ring-color);
+    --focus-ring-offset: 3px;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  summary,
+  label[for],
+  select:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
 :root {
   --brand-black: #231f20;
   --brand-white: #ffffff;
@@ -74,6 +96,23 @@
   --site-header-z: 9010;
   --site-loading-z: 10000;
   --site-lightbox-z: 10010;
+  /*
+    Motion tokens — đường cong + thời lượng dùng chung (xem design-system/MASTER.md).
+    Web Animations API trong JS không đọc được var(): lightbox đọc --ease-ios
+    bằng getComputedStyle; timer JS (menu, lightbox) giữ hằng số ms riêng.
+  */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1); /* mặc định: vào nhanh, hãm êm */
+  --ease-out-expo: cubic-bezier(0.19, 1, 0.22, 1); /* chữ Moving Letters */
+  --ease-ios: cubic-bezier(0.32, 0.72, 0, 1); /* lò xo iOS: menu mở, lightbox */
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1); /* thu/ra đối xứng */
+  --ease-in-out-cubic: cubic-bezier(0.645, 0.045, 0.355, 1); /* trượt full-page */
+  --ease-out-quad: cubic-bezier(0.25, 0.46, 0.45, 0.94); /* hiệu ứng chữ Animista */
+  --ease-in-quad: cubic-bezier(0.55, 0.085, 0.68, 0.53); /* text-focus-in */
+  --motion-fast: 150ms; /* phản hồi tức thì: mờ chữ khi đóng menu */
+  --motion-base: 200ms; /* hover, đổi màu, crossfade ảnh */
+  --motion-medium: 300ms; /* đổi màu header/logo, mục menu hiện */
+  --motion-slow: 500ms; /* panel menu mở */
+  --motion-slower: 700ms; /* logo đỏ (biến thể timed) */
   /* Overlay (loading) có thể cao hơn 1 màn — không dùng cho hero in-flow */
   --site-overlay-h: max(
     100lvh,
@@ -317,7 +356,7 @@ a.contact-info-value:hover {
    * background-color của phần tử thì Safari luôn repaint.
    */
   background-color: var(--foreground);
-  transition: background-color 300ms ease;
+  transition: background-color var(--motion-medium) ease;
   -webkit-mask: url("/textLogo.svg") center / contain no-repeat;
   mask: url("/textLogo.svg") center / contain no-repeat;
   -webkit-mask-mode: alpha;
@@ -351,6 +390,18 @@ a.contact-info-value:hover {
 .site-header-menu-toggle:focus-visible {
   outline: 2px solid var(--brand-black);
   outline-offset: 2px;
+}
+
+/* Header trong suốt trên ảnh slider: viền trắng cho thấy được */
+.site-header[data-home-overlay] .site-header-menu-toggle:focus-visible {
+  outline-color: #fff;
+}
+
+/* Vùng chạm 44×44px (icon vẫn 40px, không đổi bố cục header) */
+.site-header-menu-toggle::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
 }
 
 .site-header-menu-toggle > span:not(.sr-only) {
@@ -550,13 +601,13 @@ html:has([data-full-page-scroll-active]) main {
 
 .fps-panel-motion[data-fps-motion="entering"] {
   animation: fps-panel-enter var(--fps-transition-ms, 400ms)
-    cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    var(--ease-out) forwards;
   z-index: 2;
 }
 
 .fps-panel-motion[data-fps-motion="exiting"] {
   animation: fps-panel-exit var(--fps-transition-ms, 400ms)
-    cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    var(--ease-out) forwards;
   z-index: 1;
 }
 
@@ -590,9 +641,9 @@ html:has([data-full-page-scroll-active]) main {
 [data-fps-slide-ready] .fps-slide-panel {
   transition:
     transform var(--fps-transition-ms, 700ms)
-      var(--fps-slide-easing, cubic-bezier(0.645, 0.045, 0.355, 1)),
+      var(--fps-slide-easing, var(--ease-in-out-cubic)),
     bottom var(--fps-transition-ms, 700ms)
-      var(--fps-slide-easing, cubic-bezier(0.645, 0.045, 0.355, 1));
+      var(--fps-slide-easing, var(--ease-in-out-cubic));
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -809,7 +860,7 @@ html:has([data-full-page-scroll-active]) main {
 
 [data-content-partner-animate="in"] [data-text-focus-in] p,
 [data-content-partner-animate="in"] [data-text-focus-in] li {
-  animation: text-focus-in 1s cubic-bezier(0.55, 0.085, 0.68, 0.53) both;
+  animation: text-focus-in 1s var(--ease-in-quad) both;
   animation-delay: var(--fps-transition-ms, 400ms);
 }
 
@@ -941,7 +992,7 @@ html:has([data-full-page-scroll-active]) main {
 
 .ml2[data-ml2-play] .ml2-letter {
   animation: ml2-letter-in var(--ml2-duration)
-    cubic-bezier(0.19, 1, 0.22, 1) var(--ml2-delay, 0ms) both;
+    var(--ease-out-expo) var(--ml2-delay, 0ms) both;
 }
 
 @keyframes ml2-letter-in {
@@ -991,7 +1042,7 @@ html:has([data-full-page-scroll-active]) main {
 
 .ml7[data-ml7-play] .ml7-letter {
   animation: ml7-letter-in var(--ml7-duration)
-    cubic-bezier(0.19, 1, 0.22, 1) var(--ml7-delay, 0ms) both;
+    var(--ease-out-expo) var(--ml7-delay, 0ms) both;
 }
 
 @keyframes ml7-letter-in {
@@ -1444,14 +1495,14 @@ html:has([data-full-page-scroll-active]) main {
   --brand-break-enter-ratio: 0.4;
   /* Vào sớm hơn điểm ghim 20% màn hình — ảnh đã hiện gần hết */
   --brand-break-timed-enter-lead: 0.2;
-  --brand-break-timed-ms: 700ms;
+  --brand-break-timed-ms: var(--motion-slower);
 }
 
 [data-brand-break][data-logo-mode="timed"] [data-logo-block] {
   --logo-timed-delay: 0ms;
   transform: translate3d(100vw, 0, 0);
   transition: transform var(--brand-break-timed-ms, 700ms)
-    cubic-bezier(0.22, 1, 0.36, 1) var(--logo-timed-delay);
+    var(--ease-out) var(--logo-timed-delay);
 }
 
 [data-brand-break][data-logo-mode="timed"] [data-logo-block="mid"] {
@@ -1472,7 +1523,7 @@ html:has([data-full-page-scroll-active]) main {
 [data-brand-break][data-logo-mode="timed"] [data-logo-block-face] {
   transform: translate3d(0, 0, 0);
   transition: transform var(--brand-break-timed-ms, 700ms)
-    cubic-bezier(0.65, 0, 0.35, 1) var(--logo-timed-delay, 0ms);
+    var(--ease-in-out) var(--logo-timed-delay, 0ms);
 }
 
 [data-brand-break][data-logo-mode="timed"][data-logo-state="after"]
@@ -1596,6 +1647,24 @@ html:has(#hero-carousel) body {
   touch-action: manipulation;
 }
 
+/* Lớp tối rất nhẹ ở đáy ảnh (sau chữ/dots): chữ trắng luôn đọc được trên ảnh
+   sáng. Nằm trong stacking context của caption (z-20) → dưới chữ, trên ảnh. */
+[data-hero-caption]::before {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: -1;
+  height: calc(100% + 5rem);
+  background: linear-gradient(
+    to top,
+    rgb(0 0 0 / 0.38) 0%,
+    rgb(0 0 0 / 0.18) 55%,
+    rgb(0 0 0 / 0) 100%
+  );
+  pointer-events: none;
+}
+
 [data-carousel-dots] {
   --carousel-dot-size: 8px;
   --carousel-dot-gap: 8px;
@@ -1603,11 +1672,24 @@ html:has(#hero-carousel) body {
 }
 
 [data-carousel-dot] {
+  position: relative;
   width: var(--carousel-dot-size);
   height: var(--carousel-dot-size);
   border: 1px solid rgb(255 255 255 / 0.7);
   border-radius: 9999px;
   background: transparent;
+}
+
+/* Vùng chạm dot: cao 44px, rộng đúng 1 bước (dot + gap) — không chồng nhau */
+[data-carousel-dot]::after {
+  content: "";
+  position: absolute;
+  inset: -18px calc(var(--carousel-dot-gap) / -2);
+}
+
+[data-carousel-dot]:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
 }
 
 [data-carousel-dot="active"] {
@@ -1667,7 +1749,7 @@ html:has(#hero-carousel) body {
   clip-path: inset(0 0 0 0);
   /* Mở: nhanh lúc đầu, hãm êm khi chạm đáy màn hình */
   transition: clip-path var(--menu-panel-open-ms, 500ms)
-    cubic-bezier(0.32, 0.72, 0, 1);
+    var(--ease-ios);
 }
 
 .mobile-menu-panel[data-phase="closing"] {
@@ -1676,7 +1758,7 @@ html:has(#hero-carousel) body {
   clip-path: inset(0 0 100% 0);
   /* Đóng: chờ chữ mờ bớt rồi thu panel lên, tăng/giảm tốc đều hai đầu */
   transition: clip-path var(--menu-panel-close-ms, 400ms)
-    cubic-bezier(0.65, 0, 0.35, 1) var(--menu-panel-close-delay, 100ms);
+    var(--ease-in-out) var(--menu-panel-close-delay, 100ms);
 }
 
 .mobile-menu-panel-inner {
@@ -1712,24 +1794,28 @@ html:has(#hero-carousel) body {
   letter-spacing: 0.25em;
   text-transform: uppercase;
   color: var(--foreground);
-  transition: color 200ms ease;
+  transition: color var(--motion-base) ease;
 }
 
 .mobile-menu-links a[aria-current="page"] {
   color: var(--brand-red);
 }
 
-.mobile-menu-links a:focus,
-.mobile-menu-links a:focus-visible {
+.mobile-menu-links a:focus:not(:focus-visible) {
   outline: none;
+}
+
+.mobile-menu-links a:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 6px;
 }
 
 .mobile-menu-links li {
   opacity: 0;
   transform: translateY(0.5rem);
   transition:
-    opacity var(--menu-link-anim-ms, 300ms) cubic-bezier(0.22, 1, 0.36, 1),
-    transform var(--menu-link-anim-ms, 300ms) cubic-bezier(0.22, 1, 0.36, 1);
+    opacity var(--menu-link-anim-ms, 300ms) var(--ease-out),
+    transform var(--menu-link-anim-ms, 300ms) var(--ease-out);
 }
 
 .mobile-menu-links[data-phase="opening"] li,
@@ -1857,7 +1943,7 @@ html:has(#hero-carousel) body {
 .project-card-hover-scale {
   --home-project-hover-scale: 1.2;
   --home-project-hover-ms: 280ms;
-  --home-project-hover-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --home-project-hover-ease: var(--ease-out);
   z-index: 0;
 }
 
@@ -1908,7 +1994,7 @@ ul:has(.project-card-hover-scale) {
 .home-project-card-curtain--reveal {
   height: 0%;
   overflow: hidden;
-  transition: height var(--curtain-duration, 2s) cubic-bezier(0.22, 1, 0.36, 1);
+  transition: height var(--curtain-duration, 2s) var(--ease-out);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1971,7 +2057,7 @@ ul:has(.project-card-hover-scale) {
 [data-focus-in-expand="in"] img,
 [data-focus-in-expand="in"] h2,
 [data-focus-in-expand="in"] p {
-  animation: focus-in-expand 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+  animation: focus-in-expand 0.8s var(--ease-out-quad) both;
 }
 
 /* Lớp nét mount sau enter — không replay blur/opacity. */
@@ -2072,6 +2158,11 @@ ul:has(.project-card-hover-scale) {
   background: none;
   box-shadow: none;
   outline: none;
+}
+
+.project-detail-layout2-nav__btn--down:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .project-detail-layout2-nav__arrow {
@@ -2315,9 +2406,13 @@ ul:has(.project-card-hover-scale) {
   color: inherit;
 }
 
-.project-detail-images-default__trigger:focus,
-.project-detail-images-default__trigger:focus-visible {
+.project-detail-images-default__trigger:focus:not(:focus-visible) {
   outline: none;
+}
+
+.project-detail-images-default__trigger:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .project-detail-images-default__img {
@@ -2555,7 +2650,7 @@ ul:has(.project-card-hover-scale) {
 
 .site-image--pop-hover:hover {
   opacity: 1;
-  animation: text-shadow-drop-center 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94)
+  animation: text-shadow-drop-center 0.6s var(--ease-out-quad)
     both;
 }
 
@@ -2642,9 +2737,27 @@ html[data-lightbox-open] .site-header-menu-toggle {
   color: #fff;
 }
 
+.project-detail-lightbox__nav {
+  /* Vùng chạm ≥ 44px (Button size="icon" mặc định 40px) */
+  min-width: 44px;
+  min-height: 44px;
+}
+
 .project-detail-lightbox__nav:hover {
   color: #fff;
   background: rgb(255 255 255 / 12%);
+}
+
+.project-detail-lightbox__nav:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+/* Nút X giữ cỡ/vị trí khớp nút menu (40px), mở rộng vùng chạm lên 44px */
+.project-detail-lightbox__close::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
 }
 
 .project-detail-lightbox__close {
@@ -2657,8 +2770,9 @@ html[data-lightbox-open] .site-header-menu-toggle {
   padding: 0.5rem;
   background: #7a1f27;
   color: #fff !important;
-  opacity: 0.5;
-  transition: opacity 0.2s ease;
+  /* Trước 0.5 — trên điện thoại không có hover nên nút luôn mờ, khó thấy */
+  opacity: 0.85;
+  transition: opacity var(--motion-base) ease;
 }
 
 .project-detail-lightbox__close:hover,
@@ -2947,7 +3061,7 @@ html[data-lightbox-open] .site-header-menu-toggle {
   --sl-intro-ms: var(--sl-loop-ms);
   /* Mờ dần khi tắt overlay chuyển trang (khớp OVERLAY_FADE_MS). */
   --sl-fade-ms: 250ms;
-  --sl-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --sl-ease: var(--ease-out);
   position: fixed;
   top: 0;
   left: 0;

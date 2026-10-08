@@ -35,8 +35,20 @@ const SPRING_BACK_MS = 300;
 const CHROME_IN_MS = 220;
 const CHROME_OUT_MS = 120;
 const FADE_ONLY_MS = 180;
-/** Gần đường cong lò xo khi mở/đóng app iOS: lao nhanh, hãm rất êm. */
-const IOS_EASE = "cubic-bezier(0.32, 0.72, 0, 1)";
+/** Gần đường cong lò xo khi mở/đóng app iOS: lao nhanh, hãm rất êm.
+ *  Nguồn chính: token CSS `--ease-ios` (globals.css) — giá trị này chỉ là dự phòng. */
+const IOS_EASE_FALLBACK = "cubic-bezier(0.32, 0.72, 0, 1)";
+let iosEaseCache: string | null = null;
+/** Web Animations API không đọc được var() → lấy giá trị token 1 lần. */
+function iosEase(): string {
+  if (iosEaseCache === null) {
+    const token = getComputedStyle(document.documentElement)
+      .getPropertyValue("--ease-ios")
+      .trim();
+    iosEaseCache = token || IOS_EASE_FALLBACK;
+  }
+  return iosEaseCache;
+}
 
 const SWIPE_MIN_PX = 48;
 /** Di chuyển tối thiểu trước khi quyết định vuốt ngang (đổi ảnh) hay dọc (đóng). */
@@ -181,6 +193,12 @@ export function ProjectDetailLightbox({
   const frameRef = useRef<HTMLDivElement>(null);
   const chromeRef = useRef<HTMLDivElement>(null);
   const busyRef = useRef(false);
+  /* Hiệu ứng đang chạy (mở / bật về) — để ĐẢO CHIỀU được giữa chừng thay vì
+     khoá thao tác: bấm X / Esc / vuốt khi đang mở → đóng ngay từ vị trí hiện tại. */
+  const runningRef = useRef<Animation[]>([]);
+  /* Mỗi lần đổi hiệu ứng tăng số này → callback "xong" của hiệu ứng cũ (bị huỷ)
+     không chạy nhầm (vd. hiện lại ô gốc khi đang bay về). */
+  const animGenRef = useRef(0);
   const dragRef = useRef<DragState | null>(null);
   const hiddenOriginRef = useRef<HTMLElement | null>(null);
   const headerLockTimerRef = useRef<number | null>(null);
@@ -240,6 +258,27 @@ export function ProjectDetailLightbox({
     if (el) el.style.visibility = "hidden";
   }, []);
 
+  const trackAnimations = useCallback((animations: Animation[]) => {
+    runningRef.current = animations;
+    animGenRef.current += 1;
+    return animGenRef.current;
+  }, []);
+
+  /** Dừng hiệu ứng đang chạy, giữ nguyên tư thế hiện tại (ghi vào inline style). */
+  const interruptRunning = useCallback(() => {
+    for (const animation of runningRef.current) {
+      if (animation.playState === "finished") continue;
+      try {
+        animation.commitStyles();
+      } catch {
+        /* phần tử không còn hiển thị — bỏ qua */
+      }
+      animation.cancel();
+    }
+    runningRef.current = [];
+    animGenRef.current += 1;
+  }, []);
+
   /* ---------- Mở: bay từ ô ra ---------- */
   useLayoutEffect(() => {
     if (openToken === 0) return;
@@ -250,18 +289,21 @@ export function ProjectDetailLightbox({
     if (!root || !frameEl || !backdrop || !chrome) return;
 
     busyRef.current = true;
+    let gen = 0;
     const done = () => {
+      if (animGenRef.current !== gen) return;
+      runningRef.current = [];
       busyRef.current = false;
       hideOrigin(null);
     };
 
     if (prefersReducedMotion()) {
-      root
-        .animate([{ opacity: 0 }, { opacity: 1 }], {
-          duration: FADE_ONLY_MS,
-          easing: "ease-out",
-        })
-        .finished.then(done, done);
+      const fade = root.animate([{ opacity: 0 }, { opacity: 1 }], {
+        duration: FADE_ONLY_MS,
+        easing: "ease-out",
+      });
+      gen = trackAnimations([fade]);
+      fade.finished.then(done, done);
       return;
     }
 
@@ -279,7 +321,7 @@ export function ProjectDetailLightbox({
           originPose(latest.frame, originBox),
           { transform: REST_TRANSFORM, clipPath: REST_CLIP },
         ],
-        { duration: OPEN_MS, easing: IOS_EASE },
+        { duration: OPEN_MS, easing: iosEase() },
       );
     } else {
       flight = frameEl.animate(
@@ -290,26 +332,29 @@ export function ProjectDetailLightbox({
           },
           { transform: REST_TRANSFORM, opacity: 1 },
         ],
-        { duration: OPEN_MS, easing: IOS_EASE },
+        { duration: OPEN_MS, easing: iosEase() },
       );
     }
-    backdrop.animate([{ opacity: 0 }, { opacity: 1 }], {
+    const backdropFade = backdrop.animate([{ opacity: 0 }, { opacity: 1 }], {
       duration: OPEN_MS,
       easing: "ease-out",
     });
-    chrome.animate([{ opacity: 0 }, { opacity: 1 }], {
+    const chromeFade = chrome.animate([{ opacity: 0 }, { opacity: 1 }], {
       duration: CHROME_IN_MS,
       delay: OPEN_MS * 0.45,
       easing: "ease-out",
       fill: "backwards",
     });
+    gen = trackAnimations([flight, backdropFade, chromeFade]);
     flight.finished.then(done, done);
-  }, [openToken, hideOrigin]);
+  }, [openToken, hideOrigin, trackAnimations]);
 
   /* ---------- Đóng: bay về ô (từ vị trí hiện tại, kể cả đang kéo) ---------- */
   const requestClose = useCallback(() => {
     const latest = latestRef.current;
-    if (busyRef.current || latest.phase !== "open") return;
+    if (latest.phase !== "open") return;
+    /* Đang mở dở / đang bật về → dừng tại chỗ rồi bay về từ đúng vị trí đó. */
+    if (busyRef.current) interruptRunning();
     const root = rootRef.current;
     const frameEl = frameRef.current;
     const backdrop = backdropRef.current;
@@ -328,8 +373,10 @@ export function ProjectDetailLightbox({
     };
 
     if (prefersReducedMotion()) {
+      const startRoot = root.style.opacity || "1";
+      root.style.opacity = "";
       root
-        .animate([{ opacity: 1 }, { opacity: 0 }], {
+        .animate([{ opacity: startRoot }, { opacity: 0 }], {
           duration: FADE_ONLY_MS,
           easing: "ease-in",
           fill: "forwards",
@@ -341,7 +388,12 @@ export function ProjectDetailLightbox({
     const view = readViewport();
     const originEl = latest.getOriginElement?.(latest.current) ?? null;
     let originBox = latest.hasRatio ? visibleBox(originEl, view) : null;
-    if (!originBox && latest.hasRatio && originEl && latest.scrollOriginIntoView) {
+    if (
+      !originBox &&
+      latest.hasRatio &&
+      originEl &&
+      latest.scrollOriginIntoView
+    ) {
       const r = originEl.getBoundingClientRect();
       window.scrollTo({
         top: window.scrollY + r.top - (view.h - r.height) / 2,
@@ -351,9 +403,13 @@ export function ProjectDetailLightbox({
     }
 
     const startTransform = frameEl.style.transform || REST_TRANSFORM;
+    const startClip = frameEl.style.clipPath || REST_CLIP;
+    const startOpacity = frameEl.style.opacity || "1";
     const startBackdrop = backdrop.style.opacity || "1";
     const startChrome = chrome.style.opacity || "1";
     frameEl.style.transform = "";
+    frameEl.style.clipPath = "";
+    frameEl.style.opacity = "";
     backdrop.style.opacity = "";
     chrome.style.opacity = "";
 
@@ -362,21 +418,25 @@ export function ProjectDetailLightbox({
       hideOrigin(originEl);
       flight = frameEl.animate(
         [
-          { transform: startTransform, clipPath: REST_CLIP },
-          originPose(latest.frame, originBox),
+          {
+            transform: startTransform,
+            clipPath: startClip,
+            opacity: startOpacity,
+          },
+          { ...originPose(latest.frame, originBox), opacity: 1 },
         ],
-        { duration: CLOSE_MS, easing: IOS_EASE, fill: "forwards" },
+        { duration: CLOSE_MS, easing: iosEase(), fill: "forwards" },
       );
     } else {
       flight = frameEl.animate(
         [
-          { transform: startTransform, opacity: 1 },
+          { transform: startTransform, opacity: startOpacity },
           {
             transform: `${startTransform} scale(${FALLBACK_SCALE})`,
             opacity: 0,
           },
         ],
-        { duration: CLOSE_MS, easing: IOS_EASE, fill: "forwards" },
+        { duration: CLOSE_MS, easing: iosEase(), fill: "forwards" },
       );
     }
     backdrop.animate([{ opacity: startBackdrop }, { opacity: 0 }], {
@@ -390,7 +450,7 @@ export function ProjectDetailLightbox({
       fill: "forwards",
     });
     flight.finished.then(finish, finish);
-  }, [hideOrigin]);
+  }, [hideOrigin, interruptRunning]);
 
   /* ---------- Vuốt xuống chưa đủ → bật về ---------- */
   const springBack = useCallback(() => {
@@ -405,18 +465,27 @@ export function ProjectDetailLightbox({
     backdrop.style.opacity = "";
     chrome.style.opacity = "";
     busyRef.current = true;
-    const options = { duration: SPRING_BACK_MS, easing: IOS_EASE };
+    const options = { duration: SPRING_BACK_MS, easing: iosEase() };
     const flight = frameEl.animate(
       [{ transform: startTransform }, { transform: REST_TRANSFORM }],
       options,
     );
-    backdrop.animate([{ opacity: startBackdrop }, { opacity: 1 }], options);
-    chrome.animate([{ opacity: startChrome }, { opacity: 1 }], options);
+    const backdropFade = backdrop.animate(
+      [{ opacity: startBackdrop }, { opacity: 1 }],
+      options,
+    );
+    const chromeFade = chrome.animate(
+      [{ opacity: startChrome }, { opacity: 1 }],
+      options,
+    );
+    const gen = trackAnimations([flight, backdropFade, chromeFade]);
     const done = () => {
+      if (animGenRef.current !== gen) return;
+      runningRef.current = [];
       busyRef.current = false;
     };
     flight.finished.then(done, done);
-  }, []);
+  }, [trackAnimations]);
 
   const goTo = useCallback(
     (next: number) => {

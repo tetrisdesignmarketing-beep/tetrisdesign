@@ -2,8 +2,8 @@
 
 import type { CSSProperties } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { useSiteLoading } from "@/components/site/site-loading-context";
+import { useSitePathname } from "@/hooks/use-site-pathname";
 import { siteNav } from "@/lib/site-content";
 import { cn } from "@/lib/utils";
 
@@ -25,7 +25,7 @@ export function SiteNavLinks({
   inverted,
   menuPhase,
 }: SiteNavLinksProps) {
-  const pathname = usePathname();
+  const pathname = useSitePathname();
   const { navigateWithLoading } = useSiteLoading();
 
   return (

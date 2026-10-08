@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useSyncExternalStore } from "react";
-import { usePathname } from "next/navigation";
 import { DesktopNav } from "@/components/site/desktop-nav";
 import { MobileNav } from "@/components/site/mobile-nav";
 import { SiteLogo } from "@/components/site/site-logo";
+import { useSitePathname } from "@/hooks/use-site-pathname";
 import { cn } from "@/lib/utils";
 
 const HEADER_OVERLAY_SCROLL_THRESHOLD = 48;
@@ -23,7 +23,7 @@ function getScrollPastHeaderOverlayThresholdServer() {
 }
 
 export function SiteHeader() {
-  const pathname = usePathname();
+  const pathname = useSitePathname();
 
   return <SiteHeaderInner key={pathname} pathname={pathname} />;
 }
