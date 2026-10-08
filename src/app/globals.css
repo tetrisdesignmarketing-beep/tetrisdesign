@@ -54,6 +54,12 @@
      public — đổi 1 chỗ, áp mọi nơi không đặt độ đậm riêng. Neue Einstellung
      đang đóng gói 400/500/700 (xem @font-face). Admin giữ 400. */
   --site-body-font-weight: 400;
+  /* Khoảng cách chữ (letter-spacing) dùng chung — đổi 4 dòng này để chỉnh cả
+     site (logo là SVG nên không bị ảnh hưởng). Đoạn văn nội dung giữ normal. */
+  --tracking-label-wide: 0.15em; /* menu mobile, bộ lọc dự án, nhãn trang lỗi */
+  --tracking-label: 0.12em; /* menu ngang, caption slider, nút, nhãn IN HOA */
+  --tracking-title: 0.05em; /* tiêu đề mục (About, Dịch vụ), meta ảnh bìa */
+  --tracking-detail: 0.03em; /* tên thẻ dự án, số đếm, ©, nhãn nhỏ */
   /* Nền tạm của khung ảnh khi ảnh chưa tải (xám ấm nhạt) — thay vì trắng.
      Nền tối (vd. lưới LAYOUT1 nền đen) dùng --site-image-placeholder-dark. */
   --site-image-placeholder: #eeebe6;
@@ -195,7 +201,7 @@
   margin: 0;
   font-size: 0.75rem;
   line-height: var(--site-footer-copyright-line);
-  letter-spacing: 0.025em;
+  letter-spacing: var(--tracking-detail);
   color: var(--muted-foreground);
 }
 
@@ -269,7 +275,7 @@ a.contact-info-value:hover {
   .contact-info-label {
     font-weight: var(--site-label-font-weight);
     text-transform: uppercase;
-    letter-spacing: 0.06em;
+    letter-spacing: var(--tracking-detail);
   }
 
   .contact-info-value {
@@ -665,7 +671,7 @@ html:has([data-full-page-scroll-active]) main {
   --about-scroll-blur-to: 0.4;
   /* Chạm đáy inner scroll → sau delay bỏ blur (text cuối không bị mờ vĩnh viễn) */
   --about-scroll-blur-settle-ms: 200;
-  --about-section-title-tracking: 0.08em;
+  --about-section-title-tracking: var(--tracking-title);
   padding-bottom: 0px;
 }
 
@@ -678,7 +684,7 @@ html:has([data-full-page-scroll-active]) main {
 }
 
 [data-content-partner] {
-  --about-section-title-tracking: 0.08em;
+  --about-section-title-tracking: var(--tracking-title);
 }
 
 [data-about-intro] [data-section-title],
@@ -1791,7 +1797,7 @@ html:has(#hero-carousel) body {
   display: inline-block;
   font-size: var(--site-label-font-size);
   font-weight: var(--site-label-font-weight);
-  letter-spacing: 0.25em;
+  letter-spacing: var(--tracking-label-wide);
   text-transform: uppercase;
   color: var(--foreground);
   transition: color var(--motion-base) ease;
@@ -2004,7 +2010,7 @@ ul:has(.project-card-hover-scale) {
 }
 
 [data-service-title] {
-  --service-section-title-tracking: 0.08em;
+  --service-section-title-tracking: var(--tracking-title);
   letter-spacing: var(--service-section-title-tracking);
 }
 
@@ -2081,7 +2087,7 @@ ul:has(.project-card-hover-scale) {
   }
 
   [data-focus-in-expand] [data-service-title] {
-    letter-spacing: var(--service-section-title-tracking, 0.08em);
+    letter-spacing: var(--service-section-title-tracking, var(--tracking-title));
   }
 }
 
@@ -2099,7 +2105,7 @@ ul:has(.project-card-hover-scale) {
   }
 
   [data-focus-in-expand] [data-service-title] {
-    letter-spacing: var(--service-section-title-tracking, 0.08em);
+    letter-spacing: var(--service-section-title-tracking, var(--tracking-title));
   }
 }
 
@@ -2267,7 +2273,7 @@ ul:has(.project-card-hover-scale) {
   padding: 10px 12px;
   font-family: var(--font-ui), system-ui, sans-serif;
   font-size: 0.7rem;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--tracking-detail);
   color: var(--brand-black);
   box-shadow: 0 0 10px 0 rgb(0 0 0 / 0.08);
   pointer-events: none;
@@ -2329,7 +2335,7 @@ ul:has(.project-card-hover-scale) {
   max-width: 28ch;
   font-size: 13px;
   line-height: 1.2;
-  letter-spacing: 0.12em;
+  letter-spacing: var(--tracking-title);
   text-transform: uppercase;
   color: #fff;
   opacity: 0.4;
@@ -2540,7 +2546,7 @@ ul:has(.project-card-hover-scale) {
   font-size: clamp(2rem, 7vw, 3.25rem);
   font-weight: 400;
   line-height: 1;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--tracking-detail);
   text-transform: uppercase;
   color: var(--brand-red);
   white-space: nowrap;
@@ -2735,7 +2741,7 @@ html[data-lightbox-open] .site-header-menu-toggle {
   transform: translateX(-50%);
   font-family: var(--font-mono), ui-monospace, monospace;
   font-size: 0.875rem;
-  letter-spacing: 0.06em;
+  letter-spacing: var(--tracking-detail);
   pointer-events: none;
 }
 
@@ -2863,14 +2869,14 @@ html[data-lightbox-open] .site-header-menu-toggle {
   font-size: var(--site-label-font-size);
   font-weight: var(--site-label-font-weight);
   line-height: 1.1;
-  letter-spacing: 0.25em;
+  letter-spacing: var(--tracking-label-wide);
   text-transform: uppercase;
   color: var(--brand-red);
 }
 
 @media (min-width: 1024px) {
   .project-detail-related .text {
-    letter-spacing: 0.2em;
+    letter-spacing: var(--tracking-label);
   }
 }
 
@@ -3005,7 +3011,7 @@ html[data-lightbox-open] .site-header-menu-toggle {
     font-size: clamp(0.65rem, 0.9vw, 0.8rem);
     font-weight: 500;
     line-height: 1.25;
-    letter-spacing: 0.06em;
+    letter-spacing: var(--tracking-detail);
     text-align: center;
     text-transform: uppercase;
     color: #7a1f27;

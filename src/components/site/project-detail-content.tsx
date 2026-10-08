@@ -37,7 +37,7 @@ export function ProjectDetailContent({
       )}
     >
       {meta ? (
-        <p className="site-label-text uppercase tracking-[0.2em] text-muted-foreground">
+        <p className="site-label-text uppercase tracking-[var(--tracking-label)] text-muted-foreground">
           {meta}
         </p>
       ) : null}

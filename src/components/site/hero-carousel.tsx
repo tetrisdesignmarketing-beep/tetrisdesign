@@ -434,7 +434,7 @@ export function HeroCarousel({
 
         {/* Desktop — title | dots | CTA */}
         <div className="relative hidden items-center md:flex">
-          <div className="z-10 flex min-w-0 flex-1 items-baseline gap-8 pr-8 text-sm font-medium tracking-[0.2em] text-white uppercase">
+          <div className="z-10 flex min-w-0 flex-1 items-baseline gap-8 pr-8 text-sm font-medium tracking-[var(--tracking-label)] text-white uppercase">
             <span className="truncate">{activeSlide.title}</span>
             <span className="truncate opacity-90">{activeSlide.location}</span>
           </div>
@@ -456,7 +456,7 @@ export function HeroCarousel({
                 event.preventDefault();
                 navigateWithLoading(activeSlide.href);
               }}
-              className="cursor-pointer rounded-full bg-white px-6 py-2.5 text-xs font-medium tracking-[0.2em] text-[#231f20] uppercase transition-colors duration-200 ease-out hover:bg-brand-red hover:text-white"
+              className="cursor-pointer rounded-full bg-white px-6 py-2.5 text-xs font-medium tracking-[var(--tracking-label)] text-[#231f20] uppercase transition-colors duration-200 ease-out hover:bg-brand-red hover:text-white"
             >
               XEM DỰ ÁN
             </Link>

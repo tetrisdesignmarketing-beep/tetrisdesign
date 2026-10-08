@@ -55,7 +55,7 @@ export default async function BlogPage() {
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-10">
       <div className="mb-10">
-        <h1 className="text-2xl font-medium uppercase tracking-[0.2em]">
+        <h1 className="text-2xl font-medium uppercase tracking-[var(--tracking-label)]">
           Tin tức
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
@@ -86,7 +86,7 @@ export default async function BlogPage() {
               />
             )}
             <CardHeader>
-              <CardTitle className="text-base font-medium uppercase tracking-wide">
+              <CardTitle className="text-base font-medium uppercase tracking-[var(--tracking-title)]">
                 <Link
                   href={`/blog/${post.slug}`}
                   className="hover:text-brand-red"
@@ -107,7 +107,7 @@ export default async function BlogPage() {
                 <p className="text-sm text-muted-foreground">{post.excerpt}</p>
                 <Link
                   href={`/blog/${post.slug}`}
-                  className="mt-3 inline-block text-xs font-medium uppercase tracking-wider hover:text-brand-red"
+                  className="mt-3 inline-block text-xs font-medium uppercase tracking-[var(--tracking-title)] hover:text-brand-red"
                 >
                   Đọc tiếp →
                 </Link>

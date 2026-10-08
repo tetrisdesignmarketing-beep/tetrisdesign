@@ -66,13 +66,13 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
     <article className="mx-auto w-full max-w-3xl px-4 py-10">
       <Link
         href="/blog"
-        className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-brand-red"
+        className="text-xs font-medium uppercase tracking-[var(--tracking-label)] text-muted-foreground transition-colors hover:text-brand-red"
       >
         ← Tin tức
       </Link>
 
       <header className="mb-8 mt-8">
-        <h1 className="text-2xl font-medium uppercase tracking-wide md:text-3xl">
+        <h1 className="text-2xl font-medium uppercase tracking-[var(--tracking-title)] md:text-3xl">
           {post.title}
         </h1>
         <time

@@ -68,7 +68,7 @@ export function SiteNavLinks({
                 }
                 className={cn(
                   menuPhase === undefined &&
-                    "site-label-text whitespace-nowrap uppercase tracking-[0.2em] transition-colors",
+                    "site-label-text whitespace-nowrap uppercase tracking-[var(--tracking-label)] transition-colors",
                   isActive && menuPhase === undefined
                     ? inverted
                       ? "text-white"

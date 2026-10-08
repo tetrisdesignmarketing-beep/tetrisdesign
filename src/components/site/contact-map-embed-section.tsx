@@ -70,7 +70,7 @@ export function ContactMapEmbedSection({
           className="absolute left-1/2 top-1/2 z-10 flex -translate-x-1/2 -translate-y-[calc(100%-14px)] flex-col items-center gap-1 p-3 touch-manipulation"
           aria-label={`${address} — mở Google Maps`}
         >
-          <span className="rounded-sm bg-background px-2 py-0.5 text-[11px] font-medium tracking-wide text-foreground shadow-sm">
+          <span className="rounded-sm bg-background px-2 py-0.5 text-[11px] font-medium tracking-[var(--tracking-detail)] text-foreground shadow-sm">
             Tetris
           </span>
           {/* eslint-disable-next-line @next/next/no-img-element -- SVG pin tĩnh public */}
@@ -90,7 +90,7 @@ export function ContactMapEmbedSection({
           href={mapsUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex min-h-11 items-center justify-center px-2 text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground transition-colors touch-manipulation hover:text-brand-red"
+          className="inline-flex min-h-11 items-center justify-center px-2 text-xs font-medium uppercase tracking-[var(--tracking-label)] text-muted-foreground transition-colors touch-manipulation hover:text-brand-red"
         >
           Mở Google Maps →
         </Link>
