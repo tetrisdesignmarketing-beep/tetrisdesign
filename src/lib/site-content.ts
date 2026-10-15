@@ -112,6 +112,8 @@ export const siteAbout = {
 
 export interface SiteService {
   title: string;
+  /** Nhãn phụ (tiếng Anh) phía trên mô tả — không bắt buộc. */
+  label?: string;
   description: string;
   image: string;
   imageAlt: string;
@@ -119,21 +121,25 @@ export interface SiteService {
 
 export const siteServices: SiteService[] = [
   {
-    title: "THIẾT KẾ NHẬN DIỆN THƯƠNG HIỆU",
+    /* Hiển thị đúng như gõ (không ép viết hoa) — trang Dịch vụ dạng danh sách lớn. */
+    title: "Nhận diện Thương hiệu",
+    label: "BRAND IDENTITY",
     description:
       "Tetris đồng hành cùng khách hàng trong việc định hình ngôn ngữ thị giác và định hướng thương hiệu, từ đó xây dựng một hệ thống nhận diện rõ ràng, nhất quán và mang tính ứng dụng cao trong thực tế.",
     image: "/site/services/service1.png",
     imageAlt: "Thiết kế nhận diện thương hiệu",
   },
   {
-    title: "THIẾT KẾ KIẾN TRÚC & NỘI THẤT",
+    title: "Thiết kế Kiến trúc & Nội thất",
+    label: "ARCHITECTURE & INTERIOR",
     description:
       "Nơi câu chuyện thương hiệu được chuyển hóa thành ngôn ngữ không gian. Mỗi đường nét, vật liệu và bố cục đều được tính toán nhằm kiến tạo một không gian vừa giàu giá trị thẩm mỹ, vừa đáp ứng hành vi người dùng và mục tiêu kinh doanh.",
     image: "/site/services/service2.png",
     imageAlt: "Thiết kế kiến trúc và nội thất",
   },
   {
-    title: "THI CÔNG",
+    title: "Thi công",
+    label: "CONSTRUCTION",
     description:
       "Trong suốt quá trình triển khai, Tetris kiểm soát chặt chẽ từng giai đoạn để đảm bảo thiết kế được hiện thực hóa một cách chính xác, nhất quán và hiệu quả.",
     image: "/site/services/service3.png",

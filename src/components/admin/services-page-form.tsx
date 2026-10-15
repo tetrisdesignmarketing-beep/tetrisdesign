@@ -15,12 +15,25 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  DEFAULT_SERVICES_LAYOUT,
   servicesPageSchema,
+  type ServicesLayout,
   type ServicesPageFormValues,
 } from "@/lib/validations/site-page";
 
+/* Cùng kiểu ô chọn "Layout trang chi tiết" ở form bài đăng. */
+const selectClassName =
+  "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
+
+const LAYOUT_OPTIONS: ReadonlyArray<{ value: ServicesLayout; label: string }> = [
+  { value: "service", label: "Mặc định — danh sách tiêu đề + ảnh" },
+  { value: "service1", label: "Design 1 — xấp ảnh" },
+  { value: "service2", label: "Design 2 — cột ảnh co giãn" },
+];
+
 const emptyService = {
   title: "",
+  label: "",
   description: "",
   image: "",
   imageAlt: "",
@@ -44,7 +57,11 @@ export function ServicesPageForm({
     formState: { errors },
   } = useForm<ServicesPageFormValues>({
     resolver: zodResolver(servicesPageSchema),
-    defaultValues: initialData,
+    // Dữ liệu cũ chưa có layout → mặc định.
+    defaultValues: {
+      ...initialData,
+      layout: initialData.layout ?? DEFAULT_SERVICES_LAYOUT,
+    },
   });
 
   const { fields, append, remove, move } = useFieldArray({
@@ -68,6 +85,22 @@ export function ServicesPageForm({
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <div className="space-y-2">
+        <Label htmlFor="services-layout">Layout trang Dịch vụ</Label>
+        <select
+          id="services-layout"
+          className={selectClassName}
+          {...register("layout")}
+        >
+          {LAYOUT_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <FieldError message={errors.layout?.message} />
+      </div>
+
       {fields.length === 0 && (
         <p className="text-sm text-muted-foreground">
           Chưa có dịch vụ trên database. Thêm khối, chọn ảnh từ Media, rồi lưu.
@@ -127,7 +160,22 @@ export function ServicesPageForm({
               id={`service-title-${index}`}
               {...register(`items.${index}.title`)}
             />
+            <p className="text-xs text-muted-foreground">
+              Hiển thị đúng như gõ (vd. &quot;Nhận diện Thương hiệu&quot;), không tự viết hoa.
+            </p>
             <FieldError message={errors.items?.[index]?.title?.message} />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor={`service-label-${index}`}>
+              Nhãn phụ (không bắt buộc)
+            </Label>
+            <Input
+              id={`service-label-${index}`}
+              placeholder="VD: BRAND IDENTITY"
+              {...register(`items.${index}.label`)}
+            />
+            <FieldError message={errors.items?.[index]?.label?.message} />
           </div>
 
           <div className="space-y-2">

@@ -3274,3 +3274,542 @@ html:not([data-intro-done]):has([data-site-loading-intro])
     animation-delay: 0s;
   }
 }
+
+/* ── Trang Dịch vụ: danh sách tiêu đề trái + ảnh/mô tả phải ───────────── */
+/*
+ * Desktop (≥1024px) lấy tỷ lệ theo mockup 2000×1125 (16:9), quy ra vw; kèm giới hạn
+ * theo svh để màn thấp/rộng vẫn vừa 1 khung: ảnh 429px = 21.5vw (38svh),
+ * tiêu đề cap 56px ≈ 4vw, chữ "Work&" cap 515px ≈ 36.8vw (65svh).
+ * Điện thoại/tablet (<1024px): tiêu đề trên, ảnh rồi tới chữ xếp dọc,
+ * "Work&" chạm đáy; mọi thứ gói trong 1 khung hình dưới header.
+ */
+.services-screen {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100svh - var(--site-header-total-height));
+  overflow: hidden;
+}
+
+.services-showcase {
+  display: grid;
+  gap: 5vw;
+  width: 100%;
+  /* Sát lề trang: thẳng hàng với logo/menu của header (cùng padding ngang). */
+  padding: 4vw var(--site-header-pad-inline) 5vw;
+}
+
+.services-showcase__list {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.services-showcase__title {
+  font-family: var(--font-ui);
+  font-size: clamp(1.5rem, 7vw, 2.5rem);
+  font-weight: 500;
+  line-height: 1.28;
+  letter-spacing: 0;
+  text-align: left;
+  color: var(--foreground);
+  background: none;
+  border: 0;
+  padding: 0;
+  transition: color var(--motion-base) var(--ease-out);
+}
+
+.services-showcase__title[data-active] {
+  color: var(--brand-red);
+}
+
+.services-showcase__title:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 4px;
+}
+
+.services-showcase__stage {
+  display: grid;
+  /* Vuốt ngang để đổi mục (JS), vẫn để trình duyệt cuộn dọc bình thường. */
+  touch-action: pan-y;
+}
+
+.services-showcase__panel {
+  grid-area: 1 / 1;
+  display: grid;
+  /* Điện thoại: ảnh ở trên, chữ ở dưới (desktop ghi đè thành ảnh | chữ). */
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4vw;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity var(--motion-base) var(--ease-out),
+    visibility 0s linear var(--motion-base);
+}
+
+.services-showcase__panel[data-active] {
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity var(--motion-base) var(--ease-out),
+    visibility 0s;
+}
+
+.services-showcase__media {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  /* Vuông, rộng tối đa bằng cột; giới hạn theo chiều cao để vẫn vừa 1 khung. */
+  width: min(100%, 42svh);
+  overflow: hidden;
+}
+
+.services-showcase__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2vw;
+}
+
+.services-showcase__label {
+  font-family: var(--font-ui);
+  font-size: clamp(0.75rem, 3.2vw, 1rem);
+  font-weight: 500;
+  line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-detail);
+}
+
+.services-showcase__desc {
+  font-size: clamp(0.75rem, 3.2vw, 0.9375rem);
+  line-height: 1.45;
+  color: var(--foreground);
+}
+
+@media (min-width: 1024px) {
+  .services-showcase {
+    /* Cột trái bám lề trái, cụm ảnh + chữ bám lề phải. */
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 3vw;
+    /* Mockup: header → ảnh 32px (1.6vw); đáy ảnh → chữ "Work&" 48px (2.4vw). */
+    padding-block: 1.6vw 2.4vw;
+  }
+
+  .services-showcase__list {
+    padding-top: 0.75vw;
+  }
+
+  .services-showcase__title {
+    font-size: clamp(1.75rem, min(4vw, 7.1svh), 5rem);
+  }
+
+  .services-showcase__panel {
+    grid-template-columns: min(21.5vw, 38svh) 20.5vw;
+    gap: 2.45vw;
+  }
+
+  .services-showcase__media {
+    width: 100%;
+  }
+
+  .services-showcase__copy {
+    justify-content: flex-end;
+    gap: 4vw;
+  }
+
+  .services-showcase__label {
+    font-size: clamp(0.875rem, 1.4vw, 1.75rem);
+  }
+
+  .services-showcase__desc {
+    font-size: clamp(0.8125rem, 1vw, 1.25rem);
+  }
+}
+
+/* Chữ khổng lồ chạy ngang "Work&Work&…" — đáy chữ chạm đáy khung hình. */
+.services-marquee {
+  margin-top: auto;
+  overflow: hidden;
+  width: 100%;
+  user-select: none;
+  pointer-events: none;
+}
+
+.services-marquee__track {
+  display: flex;
+  width: max-content;
+  animation: services-marquee 40s linear infinite;
+  will-change: transform;
+}
+
+.services-marquee__copy {
+  flex: none;
+  font-family: var(--font-ui);
+  font-size: clamp(4.5rem, min(36.8vw, 65svh), 40rem);
+  font-weight: 700;
+  /* Neue Einstellung Bold: ascent 0.998, descent 0.261 → line-height 0.74 đặt
+     baseline đúng đáy dòng, đỉnh chữ hoa sát mép trên (không thừa khoảng trắng). */
+  line-height: 0.74;
+  letter-spacing: -0.02em;
+  white-space: pre;
+  color: var(--foreground);
+}
+
+@keyframes services-marquee {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .services-showcase__title,
+  .services-showcase__panel,
+  .services-showcase__panel[data-active] {
+    transition: none;
+  }
+
+  .services-marquee__track {
+    animation: none;
+  }
+}
+
+/* ── Layout service1 (ServiceDesign1): cột tiêu đề như /services, khối ảnh là xấp ảnh ── */
+.service-design1__right {
+  display: grid;
+  gap: 4vw;
+}
+
+.service-design1__stack {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  width: min(100%, 42svh);
+  touch-action: pan-y;
+}
+
+.service-design1__card {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: var(--site-image-placeholder);
+  /* Thẻ ảnh: viền trắng 4px (border-box → ảnh fill tự nằm trong viền) +
+     bóng nhẹ để viền trắng vẫn nổi trên nền trang trắng. */
+  border: 4px solid var(--brand-white);
+  box-shadow: 0 2px 10px rgb(35 31 32 / 0.15);
+  will-change: transform;
+  transition:
+    transform var(--motion-slow) var(--ease-in-out-cubic),
+    opacity var(--motion-slow) var(--ease-out);
+}
+
+/* 0 = ảnh đang chọn (trên cùng, hơi nghiêng như mockup); 1, 2 = ló ra trái/phải. */
+.service-design1__card[data-rank="0"] {
+  z-index: 4;
+  transform: rotate(1.5deg);
+}
+
+.service-design1__card[data-rank="1"] {
+  z-index: 3;
+  transform: translate3d(-3%, 1%, 0) rotate(-3deg) scale(0.95);
+}
+
+.service-design1__card[data-rank="2"] {
+  z-index: 2;
+  transform: translate3d(3%, 2%, 0) rotate(2.5deg) scale(0.93);
+}
+
+.service-design1__card[data-rank="3"] {
+  z-index: 1;
+  opacity: 0;
+  transform: scale(0.9);
+}
+
+.service-design1__copies {
+  display: grid;
+}
+
+.service-design1__copy {
+  grid-area: 1 / 1;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity var(--motion-base) var(--ease-out),
+    visibility 0s linear var(--motion-base);
+}
+
+.service-design1__copy[data-active] {
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity var(--motion-base) var(--ease-out),
+    visibility 0s;
+}
+
+@media (min-width: 1024px) {
+  .service-design1__right {
+    /* Cùng tỷ lệ cột ảnh | chữ của /services. */
+    grid-template-columns: min(21.5vw, 38svh) 20.5vw;
+    gap: 2.45vw;
+  }
+
+  .service-design1__stack {
+    width: 100%;
+  }
+
+  .service-design1__card[data-rank="1"] {
+    transform: translate3d(-6%, 1.5%, 0) rotate(-5deg) scale(0.95);
+  }
+
+  .service-design1__card[data-rank="2"] {
+    transform: translate3d(6%, 2.5%, 0) rotate(4deg) scale(0.93);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .service-design1__card,
+  .service-design1__copy,
+  .service-design1__copy[data-active] {
+    transition: none;
+  }
+}
+
+/* ── Layout service2 (ServiceDesign2): cột ảnh co giãn + "Work&" đè hoà trộn ───── */
+.service-design2-screen {
+  /* Cỡ chữ "Work&" của trang này — dùng chung cho phần đè (margin âm theo em). */
+  --sd2-marquee-size: clamp(4rem, min(26vw, 34svh), 24rem);
+}
+
+.service-design2 {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 62svh;
+  gap: clamp(4px, 0.5vw, 10px);
+  padding: 4vw var(--site-header-pad-inline) 0;
+}
+
+.service-design2__col {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--site-image-placeholder);
+  color: var(--brand-white);
+  transition: flex-grow 600ms var(--ease-in-out-cubic);
+}
+
+.service-design2__col[data-active] {
+  flex-grow: 4;
+}
+
+/* Lớp tối mờ ở mép trên cho số + chữ dễ đọc (mọi cột). */
+.service-design2__col::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(
+    to bottom,
+    rgb(35 31 32 / 0.5),
+    rgb(35 31 32 / 0) 55%
+  );
+  pointer-events: none;
+}
+
+/* Mục chưa chọn: giữ màu ảnh, phủ lớp tối. */
+.service-design2__shade {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: rgb(35 31 32 / 0.55);
+  pointer-events: none;
+  transition: opacity 600ms var(--ease-in-out-cubic);
+}
+
+.service-design2__col[data-active] .service-design2__shade {
+  opacity: 0;
+}
+
+.service-design2__num {
+  position: absolute;
+  z-index: 2;
+  top: 4vw;
+  left: 4vw;
+  font-family: var(--logo-default-font);
+  font-size: clamp(1.75rem, 8vw, 3rem);
+  line-height: 1;
+  pointer-events: none;
+}
+
+.service-design2__spine {
+  position: absolute;
+  z-index: 2;
+  top: 4vw;
+  left: calc(4vw + clamp(1.75rem, 8vw, 3rem) * 1.6);
+  right: 4vw;
+  font-family: var(--font-ui);
+  font-size: clamp(1rem, 4.6vw, 1.5rem);
+  font-weight: 500;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  transition: opacity var(--motion-base) var(--ease-out);
+}
+
+.service-design2__col[data-active] .service-design2__spine {
+  opacity: 0;
+}
+
+.service-design2__panel {
+  position: absolute;
+  z-index: 2;
+  top: calc(4vw + clamp(1.75rem, 8vw, 3rem) + 3vw);
+  left: 4vw;
+  /* Bề rộng cố định (không theo cột) → chữ không xuống dòng lại khi cột đang giãn. */
+  width: calc(100vw - 2 * var(--site-header-pad-inline) - 8vw);
+  display: flex;
+  flex-direction: column;
+  gap: 2vw;
+  opacity: 0;
+  visibility: hidden;
+  transform: translate3d(0, 12px, 0);
+  transition:
+    opacity var(--motion-fast) var(--ease-out),
+    transform var(--motion-fast) var(--ease-out),
+    visibility 0s linear var(--motion-fast);
+}
+
+.service-design2__panel[data-active] {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  /* Chờ cột giãn gần xong rồi mới hiện chữ. */
+  transition:
+    opacity var(--motion-medium) var(--ease-out) 300ms,
+    transform var(--motion-medium) var(--ease-out) 300ms,
+    visibility 0s;
+}
+
+.service-design2__title {
+  font-family: var(--font-ui);
+  font-size: clamp(1.5rem, 7vw, 2.5rem);
+  font-weight: 500;
+  line-height: 1.15;
+}
+
+.service-design2__label {
+  font-family: var(--font-ui);
+  font-size: clamp(0.75rem, 3.2vw, 1rem);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+}
+
+.service-design2__desc {
+  max-width: 34ch;
+  font-size: clamp(0.75rem, 3.2vw, 0.9375rem);
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 5;
+  overflow: hidden;
+}
+
+/* Nút phủ kín cột (vùng bấm/rê chuột); trong suốt, chỉ hiện viền khi focus bàn phím. */
+.service-design2__hit {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  background: none;
+  border: 0;
+  padding: 0;
+}
+
+.service-design2__col[data-active] .service-design2__hit {
+  cursor: default;
+}
+
+.service-design2__hit:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: -4px;
+}
+
+/* "Work&" đè nửa trên lên mép dưới các cột, hoà trộn difference:
+   trắng trên nền trắng → đen; trên ảnh → đảo màu ảnh. */
+.service-design2__marquee {
+  position: relative;
+  z-index: 2;
+  font-size: var(--sd2-marquee-size);
+  /* Chữ hoa cao 0.7em, dòng 0.74em → kéo lên ~nửa chiều cao chữ. */
+  margin-top: -0.36em;
+  mix-blend-mode: difference;
+  pointer-events: none;
+}
+
+.service-design2__marquee .services-marquee__copy {
+  font-size: var(--sd2-marquee-size);
+  color: var(--brand-white);
+}
+
+.service-design2__marquee .services-marquee__track {
+  /* Chạy ngược chiều /services cho khác biệt. */
+  animation-direction: reverse;
+}
+
+@media (min-width: 1024px) {
+  .service-design2 {
+    flex-direction: row;
+    min-height: 0;
+    padding-top: 1.6vw;
+  }
+
+  .service-design2__num {
+    top: 1.6vw;
+    left: 1.6vw;
+    font-size: clamp(2rem, 4.2vw, 5rem);
+  }
+
+  /* Cột đang co: tên dịch vụ xoay dọc, đọc từ dưới lên. */
+  .service-design2__spine {
+    top: calc(1.6vw + clamp(2rem, 4.2vw, 5rem) * 1.3);
+    left: 1.6vw;
+    right: auto;
+    max-height: calc(100% - 1.6vw - clamp(2rem, 4.2vw, 5rem) * 1.3 - 2vw);
+    font-size: clamp(1rem, 1.5vw, 1.75rem);
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+  }
+
+  .service-design2__panel {
+    top: calc(1.6vw + clamp(2rem, 4.2vw, 5rem) + 1.6vw);
+    left: 1.6vw;
+    width: min(38vw, 36rem);
+    gap: 1vw;
+  }
+
+  .service-design2__title {
+    font-size: clamp(1.75rem, min(3vw, 5.4svh), 3.5rem);
+  }
+
+  .service-design2__label {
+    font-size: clamp(0.75rem, 1vw, 1.125rem);
+  }
+
+  .service-design2__desc {
+    font-size: clamp(0.8125rem, 1vw, 1.125rem);
+    -webkit-line-clamp: 6;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .service-design2__col,
+  .service-design2__shade,
+  .service-design2__spine,
+  .service-design2__panel,
+  .service-design2__panel[data-active] {
+    transition: none;
+  }
+}

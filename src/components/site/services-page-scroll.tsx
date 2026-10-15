@@ -1,8 +1,10 @@
 "use client";
 
-import { ServiceSection } from "@/components/site/service-section";
+import {
+  ServicesMarquee,
+  ServicesShowcase,
+} from "@/components/site/services-showcase";
 import { SiteFooter } from "@/components/site/site-footer";
-import { SERVICES_SECTIONS } from "@/lib/services-section-config";
 import type { SiteService } from "@/lib/site-content";
 import type { ContactPageContent } from "@/lib/validations/site-page";
 
@@ -17,18 +19,11 @@ export function ServicesPageScroll({
 }: ServicesPageScrollProps) {
   return (
     <>
-      {services.map((service, index) => (
-        <ServiceSection
-          key={service.title + index}
-          title={service.title}
-          description={service.description}
-          image={service.image}
-          imageAlt={service.imageAlt}
-          reverse={index % 2 === 1}
-          priority={index === 0}
-          sectionId={SERVICES_SECTIONS[index]?.id ?? `service-${index}`}
-        />
-      ))}
+      {/* 2 cột + chữ chạy chung 1 khung hình (desktop: cao đúng 1 màn dưới header). */}
+      <div className="services-screen">
+        <ServicesShowcase services={services} />
+        <ServicesMarquee />
+      </div>
       <SiteFooter contact={contact} />
     </>
   );

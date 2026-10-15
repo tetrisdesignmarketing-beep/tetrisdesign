@@ -7,6 +7,7 @@ import {
   homePageSchema,
   homeSlidesToFormValues,
   servicesPageSchema,
+  DEFAULT_SERVICES_LAYOUT,
   type AboutPageContent,
   type ContactPageContent,
   type HomePageFormValues,
@@ -36,7 +37,10 @@ export function getSitePageFallback(
     case "about":
       return aboutPageSchema.parse(cloneJson(siteAbout));
     case "services": {
-      const empty: ServicesPageFormValues = { items: [] };
+      const empty: ServicesPageFormValues = {
+        layout: DEFAULT_SERVICES_LAYOUT,
+        items: [],
+      };
       return empty;
     }
     case "contact": {

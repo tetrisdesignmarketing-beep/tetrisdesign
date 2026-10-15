@@ -133,12 +133,23 @@ export const aboutPageFormSchema = aboutPageSchema.extend({
 
 export const siteServiceSchema = z.object({
   title: z.string().min(1).max(200),
+  /** Nhãn phụ (vd. tiếng Anh "BRAND IDENTITY") — hiện trên mô tả; không bắt buộc. */
+  label: z.string().trim().max(120).optional(),
   description: z.string().min(1),
   image: mediaPathSchema,
   imageAlt: z.string().min(1).max(200),
 });
 
+/** Layout trang /services admin chọn: service = mặc định, service1 = xấp ảnh, service2 = cột co giãn. */
+export const SERVICES_LAYOUTS = ["service", "service1", "service2"] as const;
+export type ServicesLayout = (typeof SERVICES_LAYOUTS)[number];
+export const DEFAULT_SERVICES_LAYOUT: ServicesLayout = "service";
+export const servicesLayoutSchema = z.enum(SERVICES_LAYOUTS);
+
 export const servicesPageSchema = z.object({
+  /* Không bắt buộc (không dùng .default để input/output RHF cùng type);
+     dữ liệu cũ chưa có layout → đọc là DEFAULT_SERVICES_LAYOUT. */
+  layout: servicesLayoutSchema.optional(),
   items: z.array(siteServiceSchema).min(1, "Cần ít nhất một dịch vụ"),
 });
 
@@ -309,8 +320,10 @@ export type AboutPageContent = z.infer<typeof aboutPageSchema>;
 export type ServicesPageContent = z.infer<typeof servicesPageSchema>;
 /** Form admin Services — items có thể rỗng trước khi lưu. */
 export type ServicesPageFormValues = {
+  layout?: ServicesLayout;
   items: Array<{
     title: string;
+    label?: string;
     description: string;
     image: string;
     imageAlt: string;
