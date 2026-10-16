@@ -1,5 +1,6 @@
 "use client";
 
+import { useId } from "react";
 import { ProgressiveImage } from "@/components/site/progressive-image";
 import { useServicesTabs } from "@/hooks/use-services-tabs";
 import {
@@ -7,6 +8,7 @@ import {
   CANVAS_PREVIEW_WIDTH,
 } from "@/lib/optimized-image-src";
 import type { SiteService } from "@/lib/site-content";
+import { WORK_AND_PATH, WORK_AND_TILE } from "@/lib/work-and-mark";
 
 interface ServicesShowcaseProps {
   services: readonly SiteService[];
@@ -79,18 +81,37 @@ export function ServicesShowcase({ services }: ServicesShowcaseProps) {
   );
 }
 
-/* Theo mockup: "Work&" viết liền, nối tiếp thành "Work&Work&…". */
-const MARQUEE_TEXT = "Work&";
+/** Số ô "Work&" trong 1 bản; track có 2 bản giống hệt → translateX(-50%) lặp liền mạch. */
 const MARQUEE_REPEAT = 6;
+const TILE_W = WORK_AND_TILE.width;
+const TILE_H = WORK_AND_TILE.height;
 
-/** Chữ khổng lồ chạy ngang liên tục "Work & Work & …" — trang trí, ẩn với trình đọc màn hình. */
+/**
+ * Chữ khổng lồ chạy ngang liên tục "Work&Work&…" — SVG vẽ lại từ design (thay chữ
+ * font thường), path khai báo 1 lần rồi <use> lặp lại. Trang trí, ẩn với trình đọc màn hình.
+ */
 export function ServicesMarquee() {
-  const copy = Array.from({ length: MARQUEE_REPEAT }, () => MARQUEE_TEXT).join("");
+  const pathId = `${useId()}-work-and`;
   return (
     <div className="services-marquee" aria-hidden="true">
       <div className="services-marquee__track">
-        <span className="services-marquee__copy">{copy}</span>
-        <span className="services-marquee__copy">{copy}</span>
+        {[0, 1].map((copy) => (
+          <svg
+            key={copy}
+            className="services-marquee__copy"
+            viewBox={`0 0 ${TILE_W * MARQUEE_REPEAT} ${TILE_H}`}
+            focusable="false"
+          >
+            {copy === 0 ? (
+              <defs>
+                <path id={pathId} d={WORK_AND_PATH} />
+              </defs>
+            ) : null}
+            {Array.from({ length: MARQUEE_REPEAT }, (_, index) => (
+              <use key={index} href={`#${pathId}`} x={index * TILE_W} />
+            ))}
+          </svg>
+        ))}
       </div>
     </div>
   );

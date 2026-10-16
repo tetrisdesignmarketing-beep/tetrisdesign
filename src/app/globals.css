@@ -3306,7 +3306,8 @@ html:not([data-intro-done]):has([data-site-loading-intro])
 
 .services-showcase__title {
   font-family: var(--font-ui);
-  font-size: clamp(1.5rem, 7vw, 2.5rem);
+  /* Giảm ~25% so với bản đầu (7vw / tối đa 2.5rem). */
+  font-size: clamp(1.25rem, 5.25vw, 1.875rem);
   font-weight: 500;
   line-height: 1.28;
   letter-spacing: 0;
@@ -3398,7 +3399,8 @@ html:not([data-intro-done]):has([data-site-loading-intro])
   }
 
   .services-showcase__title {
-    font-size: clamp(1.75rem, min(4vw, 7.1svh), 5rem);
+    /* Giảm ~25% so với tỷ lệ mockup (4vw / 7.1svh / tối đa 5rem). */
+    font-size: clamp(1.5rem, min(3vw, 5.3svh), 3.75rem);
   }
 
   .services-showcase__panel {
@@ -3442,15 +3444,18 @@ html:not([data-intro-done]):has([data-site-loading-intro])
 
 .services-marquee__copy {
   flex: none;
-  font-family: var(--font-ui);
+  display: block;
+  /* font-size chỉ làm đơn vị em (giữ cỡ như chữ font cũ): chữ hoa cao 0.7em. */
   font-size: clamp(4.5rem, min(36.8vw, 65svh), 40rem);
-  font-weight: 700;
-  /* Neue Einstellung Bold: ascent 0.998, descent 0.261 → line-height 0.74 đặt
-     baseline đúng đáy dòng, đỉnh chữ hoa sát mép trên (không thừa khoảng trắng). */
-  line-height: 0.74;
-  letter-spacing: -0.02em;
-  white-space: pre;
-  color: var(--foreground);
+  /* SVG: viewBox = 6 ô "Work&" (mỗi ô 2491.6 × 605) → rộng = cao × 6 × 2491.6 / 605. */
+  height: 0.7em;
+  width: calc(0.7em * 6 * 2491.6 / 605);
+  /* Giữ khoảng 0.04em phía trên như dòng chữ cũ (line-height 0.74) → layout không xê dịch. */
+  margin-top: 0.04em;
+  overflow: visible;
+  /* Màu đúng design: đen tuyền #000 (không phải --foreground #231f20). */
+  color: #000;
+  fill: currentColor;
 }
 
 @keyframes services-marquee {
