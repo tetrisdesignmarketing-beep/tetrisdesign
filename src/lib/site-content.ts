@@ -16,7 +16,7 @@ export const siteBrand = {
   },
   fonts: {
     logoDefaultFont: "Fashion Didot W90 Regular",
-    ui: "Neue Einstellung",
+    ui: "Darker Grotesque",
   },
 } as const;
 

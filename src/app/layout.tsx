@@ -78,14 +78,14 @@ export default function RootLayout({
         {/* Chữ thường (400) + menu/label (500) đều hiện ngay khi mở trang. */}
         <link
           rel="preload"
-          href="/fonts/NeueEinstellung-Regular.woff2"
+          href="/fonts/DarkerGrotesque-Regular.woff2"
           as="font"
           type="font/woff2"
           crossOrigin="anonymous"
         />
         <link
           rel="preload"
-          href="/fonts/NeueEinstellung-Medium.woff2"
+          href="/fonts/DarkerGrotesque-Medium.woff2"
           as="font"
           type="font/woff2"
           crossOrigin="anonymous"

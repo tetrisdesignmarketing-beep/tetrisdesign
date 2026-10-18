@@ -14,7 +14,7 @@ interface SiteStatusPageProps {
 const linkClass =
   "site-label-text inline-flex items-center justify-center border border-foreground px-5 py-3 uppercase tracking-[var(--tracking-label)] transition-colors hover:border-brand-red hover:text-brand-red";
 
-/** Khung trang lỗi / 404 theo giao diện site (chữ Neue Einstellung, label menu). */
+/** Khung trang lỗi / 404 theo giao diện site (font UI --font-ui, label menu). */
 export function SiteStatusPage({
   code,
   title,

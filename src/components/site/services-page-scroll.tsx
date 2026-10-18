@@ -18,7 +18,7 @@ export function ServicesPageScroll({ services }: ServicesPageScrollProps) {
     /* 2 cột + chữ chạy chung 1 khung hình (desktop: cao đúng 1 màn dưới header); không footer. */
     <div className="services-screen">
       <ServicesShowcase services={services} />
-      <ServicesMarquee />
+      <ServicesMarquee isStatic />
     </div>
   );
 }

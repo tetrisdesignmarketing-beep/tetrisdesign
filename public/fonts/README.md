@@ -5,7 +5,8 @@
 | Font | File |
 |------|------|
 | Fashion Didot W90 Regular (logo) | `FashionDidotW90-Regular.woff2` |
-| Neue Einstellung Regular 400 — chữ thường | `NeueEinstellung-Regular.woff2` |
+| Darker Grotesque 400 / 500 / 600 / 700 — UI chính (SIL OFL, `DarkerGrotesque-OFL.txt`) | `DarkerGrotesque-{Regular,Medium,SemiBold,Bold}.woff2` |
+| Neue Einstellung Regular 400 — dự phòng | `NeueEinstellung-Regular.woff2` |
 | Neue Einstellung Medium 500 — label, menu | `NeueEinstellung-Medium.woff2` |
 | Neue Einstellung Bold 700 | `NeueEinstellung-Bold.woff2` |
 
@@ -17,4 +18,4 @@ lấy từ lịch sử git.
 
 Đường dẫn trong CSS: `/fonts/{filename}` — xem `@font-face` trong `src/app/globals.css`.
 
-Preload trong `src/app/layout.tsx`: `NeueEinstellung-Regular.woff2` và `NeueEinstellung-Medium.woff2`.
+Preload trong `src/app/layout.tsx`: `DarkerGrotesque-Regular.woff2` và `DarkerGrotesque-Medium.woff2`.

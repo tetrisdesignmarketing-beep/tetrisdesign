@@ -16,7 +16,7 @@ export function ServiceDesign1Page({ services }: ServiceDesign1PageProps) {
   return (
     <div className="services-screen">
       <ServiceDesign1 services={services} />
-      <ServicesMarquee />
+      <ServicesMarquee isStatic />
     </div>
   );
 }
