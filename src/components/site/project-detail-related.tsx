@@ -276,7 +276,7 @@ export function ProjectDetailRelated({
       }
     >
       <div className="project-detail-related__intro">
-        <h2 className="text" aria-label={RELATED_TITLE}>
+        <h2 className="text ts-display" aria-label={RELATED_TITLE}>
           {titleChars.map((char, index) => (
             <span
               key={`${char}-${index}`}
@@ -299,7 +299,7 @@ export function ProjectDetailRelated({
                   backgroundImage: `url("${getProjectCover(project)}")`,
                 }}
               />
-              <span className="grid__item-title">{project.title}</span>
+              <span className="grid__item-title ts-caption">{project.title}</span>
             </Link>
           </figure>
         ))}

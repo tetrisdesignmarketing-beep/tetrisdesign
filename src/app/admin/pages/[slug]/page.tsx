@@ -7,6 +7,7 @@ import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { ContactPageForm } from "@/components/admin/contact-page-form";
 import { HomePageForm } from "@/components/admin/home-page-form";
 import { ServicesPageForm } from "@/components/admin/services-page-form";
+import { TypographyForm } from "@/components/admin/typography-form";
 import { resolveSitePageContent } from "@/lib/site-page-defaults";
 import { isSitePageSlug } from "@/lib/validations/site-page";
 import { Button } from "@/components/ui/button";
@@ -63,6 +64,10 @@ export default async function AdminLayoutPage({
           ) : slug === "services" ? (
             <ServicesPageForm
               initialData={resolveSitePageContent("services", row?.content)}
+            />
+          ) : slug === "typography" ? (
+            <TypographyForm
+              initialData={resolveSitePageContent("typography", row?.content)}
             />
           ) : (
             <ContactPageForm

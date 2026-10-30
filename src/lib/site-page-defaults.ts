@@ -1,4 +1,8 @@
 import { resolveContactAddressParts } from "@/lib/contact-address";
+import {
+  normalizeTypographySettings,
+  type TypographySettings,
+} from "@/lib/site-typography";
 import { siteAbout, siteContact } from "@/lib/site-content";
 import {
   aboutPageSchema,
@@ -121,10 +125,16 @@ export function resolveSitePageContent(
   content: unknown,
 ): ContactPageContent;
 export function resolveSitePageContent(
-  slug: "home" | "about" | "services" | "contact",
+  slug: "typography",
+  content: unknown,
+): TypographySettings;
+export function resolveSitePageContent(
+  slug: "home" | "about" | "services" | "contact" | "typography",
   content: unknown,
 ) {
   switch (slug) {
+    case "typography":
+      return normalizeTypographySettings(content);
     case "home": {
       const parsed = homePageSchema.safeParse(content);
       if (!parsed.success) return getSitePageFallback("home");

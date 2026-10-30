@@ -107,7 +107,7 @@ export function ProjectShowcase({
         )}
       >
         {visible.length === 0 ? (
-          <p className="py-16 text-center text-sm text-muted-foreground">
+          <p className="ts-caption py-16 text-center text-sm text-muted-foreground">
             {emptyMessage}
           </p>
         ) : (
@@ -179,7 +179,7 @@ function ProjectInfiniteSentinel({
   return (
     <div
       ref={ref}
-      className="mx-auto w-full max-w-6xl px-4 py-4 text-center text-sm text-muted-foreground"
+      className="ts-caption mx-auto w-full max-w-6xl px-4 py-4 text-center text-sm text-muted-foreground"
       role="status"
       aria-live="polite"
     >

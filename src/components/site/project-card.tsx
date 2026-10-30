@@ -70,10 +70,10 @@ export function ProjectCard({
 
   const meta = centerCaption ? (
     <>
-      <h3 className="mt-2.5 w-full text-center site-label-text font-[family-name:var(--font-ui)] uppercase leading-tight tracking-[var(--tracking-detail)] text-foreground md:mt-3">
+      <h3 className="ts-label mt-2.5 w-full text-center site-label-text font-[family-name:var(--font-ui)] uppercase leading-tight tracking-[var(--tracking-detail)] text-foreground md:mt-3">
         {project.title}
       </h3>
-      <p className="mt-1 w-full text-center text-[11px] leading-snug text-foreground md:text-xs">
+      <p className="ts-caption mt-1 w-full text-center text-[11px] leading-snug text-foreground md:text-xs">
         {project.categoryLabel} | {project.location}
       </p>
     </>

@@ -1,6 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
+import {
+  DndContext,
+  KeyboardSensor,
+  MouseSensor,
+  TouchSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import {
   useFieldArray,
   useForm,
@@ -11,22 +28,113 @@ import {
   type UseFormWatch,
 } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Trash2 } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  GripVertical,
+  ImageIcon,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import { CoverImagePicker } from "@/components/admin/cover-image-picker";
+import { useMediaDrawer } from "@/components/admin/media-drawer-context";
 import {
   FieldError,
   SitePageFormFooter,
 } from "@/components/admin/site-page-form-ui";
 import { normalizePartnerHref } from "@/lib/partner-href";
+import { cn } from "@/lib/utils";
 import { putSitePage } from "@/lib/put-site-page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import {
   aboutPageFormSchema,
+  type AboutAwardsBlock,
+  type AboutContentBlock,
+  type AboutPageBlock,
   type AboutPageContent,
+  type AboutTextBlock,
 } from "@/lib/validations/site-page";
+
+const BLOCK_TYPE_LABELS: Record<AboutContentBlock["type"], string> = {
+  text: "Văn bản",
+  awards: "Giải thưởng",
+};
+
+/** Lỗi của 1 khối (union text/awards) — gộp field để đọc không cần thu hẹp kiểu. */
+type BlockErrors = FieldErrors<{
+  title: string;
+  paragraphs: string[];
+  groups: AboutAwardsBlock["groups"];
+}>;
+
+/** Lỗi của mảng đoạn văn: lỗi cả mảng (min 1) hoặc đoạn đầu tiên bị trống. */
+function paragraphsErrorMessage(errors: BlockErrors["paragraphs"]) {
+  if (!errors) return undefined;
+  if (errors.message) return errors.message;
+  if (Array.isArray(errors)) {
+    return errors.find((item) => item?.message)?.message as string | undefined;
+  }
+  return undefined;
+}
+
+function newTextBlock(): AboutTextBlock {
+  return { type: "text", title: "", paragraphs: [""] };
+}
+
+function newAwardsBlock(): AboutAwardsBlock {
+  return {
+    type: "awards",
+    title: "",
+    groups: [
+      {
+        title: "",
+        items: [{ year: new Date().getFullYear(), title: "", project: "" }],
+      },
+    ],
+  };
+}
+
+/**
+ * Vạch Brand break phải còn ≥ 1 khối nội dung trước và sau (schema) — tính
+ * vị trí vạch sau thao tác để khoá nút ↑ ↓ / xoá thay vì báo lỗi khi lưu.
+ */
+function breakIndexOf(blocks: readonly AboutPageBlock[]) {
+  return blocks.findIndex((block) => block.type === "brandBreak");
+}
+
+function isBreakIndexValid(breakIndex: number, length: number) {
+  return breakIndex > 0 && breakIndex < length - 1;
+}
+
+function canMoveBlock(
+  blocks: readonly AboutPageBlock[],
+  from: number,
+  to: number,
+) {
+  if (to < 0 || to >= blocks.length) return false;
+  const breakIndex = breakIndexOf(blocks);
+  const nextBreak =
+    from === breakIndex ? to : to === breakIndex ? from : breakIndex;
+  return isBreakIndexValid(nextBreak, blocks.length);
+}
+
+function canRemoveBlock(blocks: readonly AboutPageBlock[], index: number) {
+  const breakIndex = breakIndexOf(blocks);
+  if (index === breakIndex) return false;
+  const nextBreak = index < breakIndex ? breakIndex - 1 : breakIndex;
+  return isBreakIndexValid(nextBreak, blocks.length - 1);
+}
 
 function StringList({
   label,
@@ -81,6 +189,7 @@ function StringList({
 }
 
 function AwardGroupFields({
+  blockIndex,
   groupIndex,
   control,
   register,
@@ -88,16 +197,18 @@ function AwardGroupFields({
   canRemove,
   onRemove,
 }: {
+  blockIndex: number;
   groupIndex: number;
   control: Control<AboutPageContent>;
   register: UseFormRegister<AboutPageContent>;
-  errors: FieldErrors<AboutPageContent>;
+  errors?: BlockErrors;
   canRemove: boolean;
   onRemove: () => void;
 }) {
+  const base = `blocks.${blockIndex}.groups.${groupIndex}` as const;
   const { fields, append, remove } = useFieldArray({
     control,
-    name: `awards.groups.${groupIndex}.items`,
+    name: `${base}.items`,
   });
 
   return (
@@ -117,24 +228,30 @@ function AwardGroupFields({
       </div>
       <div className="space-y-2">
         <Label>Tên nhóm</Label>
-        <Input {...register(`awards.groups.${groupIndex}.title`)} />
-        <FieldError
-          message={errors.awards?.groups?.[groupIndex]?.title?.message}
-        />
+        <Input {...register(`${base}.title`)} />
+        <FieldError message={errors?.groups?.[groupIndex]?.title?.message} />
       </div>
       {fields.map((item, itemIndex) => (
-        <div key={item.id} className="grid gap-2 sm:grid-cols-[7rem_1fr_auto]">
+        <div
+          key={item.id}
+          className="grid gap-2 sm:grid-cols-[6rem_1fr_1fr_auto]"
+        >
           <Input
             type="number"
-            {...register(
-              `awards.groups.${groupIndex}.items.${itemIndex}.year`,
-              { valueAsNumber: true },
-            )}
+            aria-label="Năm"
+            {...register(`${base}.items.${itemIndex}.year`, {
+              valueAsNumber: true,
+            })}
           />
           <Input
-            {...register(
-              `awards.groups.${groupIndex}.items.${itemIndex}.title`,
-            )}
+            placeholder="Tên giải (in đậm)"
+            aria-label="Tên giải"
+            {...register(`${base}.items.${itemIndex}.title`)}
+          />
+          <Input
+            placeholder="Dự án / ghi chú (tuỳ chọn)"
+            aria-label="Dự án / ghi chú"
+            {...register(`${base}.items.${itemIndex}.project`)}
           />
           <Button
             type="button"
@@ -152,12 +269,128 @@ function AwardGroupFields({
         type="button"
         variant="outline"
         size="sm"
-        onClick={() => append({ year: new Date().getFullYear(), title: "" })}
+        onClick={() =>
+          append({ year: new Date().getFullYear(), title: "", project: "" })
+        }
       >
         <Plus className="h-4 w-4" />
         Thêm giải
       </Button>
     </div>
+  );
+}
+
+function AwardsBlockGroups({
+  blockIndex,
+  control,
+  register,
+  errors,
+}: {
+  blockIndex: number;
+  control: Control<AboutPageContent>;
+  register: UseFormRegister<AboutPageContent>;
+  errors?: BlockErrors;
+}) {
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: `blocks.${blockIndex}.groups`,
+  });
+
+  return (
+    <div className="space-y-3">
+      {fields.map((group, index) => (
+        <AwardGroupFields
+          key={group.id}
+          blockIndex={blockIndex}
+          groupIndex={index}
+          control={control}
+          register={register}
+          errors={errors}
+          canRemove={fields.length > 1}
+          onRemove={() => remove(index)}
+        />
+      ))}
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() =>
+          append({
+            title: "",
+            items: [{ year: new Date().getFullYear(), title: "", project: "" }],
+          })
+        }
+      >
+        <Plus className="h-4 w-4" />
+        Thêm nhóm giải thưởng
+      </Button>
+      <FieldError message={errors?.groups?.message} />
+    </div>
+  );
+}
+
+/** Logo dạng ô nhỏ trong bảng — bấm để chọn/đổi ảnh từ Media. */
+function PartnerLogoCell({
+  value,
+  name,
+  onChange,
+}: {
+  value: string;
+  name: string;
+  onChange: (url: string) => void;
+}) {
+  const { openMedia } = useMediaDrawer();
+  return (
+    <button
+      type="button"
+      onClick={() =>
+        openMedia({ accept: "image", onPick: (item) => onChange(item.url) })
+      }
+      className="flex h-12 w-20 items-center justify-center overflow-hidden rounded-md border bg-muted/30 hover:border-foreground/40"
+      aria-label={value ? `Đổi logo ${name}` : "Chọn logo"}
+      title={value ? "Đổi logo" : "Chọn logo từ Media"}
+    >
+      {value ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={value} alt={name} className="h-full w-full object-contain p-1" />
+      ) : (
+        <ImageIcon className="h-5 w-5 text-muted-foreground" />
+      )}
+    </button>
+  );
+}
+
+/** Dòng bảng kéo-thả — cùng pattern với admin-posts-table (tay nắm ở cột đầu). */
+function SortableTableRow({
+  id,
+  children,
+}: {
+  id: string;
+  children: (handle: ReactNode) => ReactNode;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id });
+  const handle = (
+    <button
+      type="button"
+      {...attributes}
+      {...listeners}
+      className="flex h-10 w-8 cursor-grab touch-none items-center justify-center rounded-md text-muted-foreground transition hover:bg-muted hover:text-foreground active:cursor-grabbing"
+      aria-label="Kéo để đổi vị trí"
+    >
+      <GripVertical className="h-4 w-4" />
+    </button>
+  );
+  return (
+    <TableRow
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={cn(
+        isDragging && "relative z-10 bg-background opacity-80 shadow-lg",
+      )}
+    >
+      {children(handle)}
+    </TableRow>
   );
 }
 
@@ -174,75 +407,135 @@ function PartnerFields({
   setValue: UseFormSetValue<AboutPageContent>;
   errors: FieldErrors<AboutPageContent>;
 }) {
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, move } = useFieldArray({
     control,
     name: "partners.items",
   });
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 150, tolerance: 8 },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+  const handleDragEnd = ({ active, over }: DragEndEvent) => {
+    if (!over || active.id === over.id) return;
+    const from = fields.findIndex((field) => field.id === active.id);
+    const to = fields.findIndex((field) => field.id === over.id);
+    if (from >= 0 && to >= 0) move(from, to);
+  };
 
   return (
-    <div className="space-y-4">
-      {fields.map((field, index) => (
-        <div key={field.id} className="space-y-3 rounded-md border p-3">
-          <div className="flex justify-end">
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              disabled={fields.length <= 1}
-              onClick={() => remove(index)}
-              aria-label="Xóa đối tác"
+    <div className="space-y-3">
+      <p className="text-xs text-muted-foreground">
+        Thứ tự trong bảng = thứ tự logo chạy trên trang — kéo biểu tượng ⋮⋮ để
+        sắp xếp. Bấm ô logo để chọn/đổi
+        ảnh. Link (tuỳ chọn): bấm logo trên trang mở link ở tab mới; để trống
+        thì logo không bấm được.
+      </p>
+      <div className="rounded-md border">
+        <Table className="min-w-[640px]">
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-12 px-2" aria-label="Kéo sắp xếp" />
+              <TableHead className="w-10">#</TableHead>
+              <TableHead className="w-24">Logo</TableHead>
+              <TableHead>Tên đối tác</TableHead>
+              <TableHead>Link (tuỳ chọn)</TableHead>
+              <TableHead className="w-16 text-right">Xoá</TableHead>
+            </TableRow>
+          </TableHeader>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={fields.map((field) => field.id)}
+              strategy={verticalListSortingStrategy}
             >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-          <div className="space-y-2">
-            <Label>Tên đối tác</Label>
-            <Input {...register(`partners.items.${index}.name`)} />
-            <FieldError
-              message={errors.partners?.items?.[index]?.name?.message}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Link (tuỳ chọn)</Label>
-            <Input
-              type="text"
-              inputMode="url"
-              placeholder="https://… hoặc amway.com"
-              {...register(`partners.items.${index}.href`, {
-                /* Gõ thiếu https:// → tự thêm khi rời ô */
-                onBlur: (event) => {
-                  const normalized = normalizePartnerHref(event.target.value);
-                  if (normalized) {
-                    setValue(`partners.items.${index}.href`, normalized, {
-                      shouldValidate: true,
-                    });
-                  }
-                },
-              })}
-            />
-            <p className="text-xs text-muted-foreground">
-              Bấm logo trên trang sẽ mở link ở tab mới. Để trống: logo không bấm
-              được.
-            </p>
-            <FieldError
-              message={errors.partners?.items?.[index]?.href?.message}
-            />
-          </div>
-          <CoverImagePicker
-            label="Logo"
-            description="Chọn logo từ Media"
-            value={watch(`partners.items.${index}.logo`)}
-            onChange={(url) =>
-              setValue(`partners.items.${index}.logo`, url, {
-                shouldValidate: true,
-              })
-            }
-          />
-          <FieldError
-            message={errors.partners?.items?.[index]?.logo?.message}
-          />
-        </div>
-      ))}
+              <TableBody>
+                {fields.map((field, index) => {
+                  const rowErrors = errors.partners?.items?.[index];
+                  return (
+                    <SortableTableRow key={field.id} id={field.id}>
+                      {(handle) => (
+                        <>
+                          <TableCell className="px-2 py-2 align-top">
+                            {handle}
+                          </TableCell>
+                          <TableCell className="px-3 py-2 align-top text-muted-foreground">
+                            <span className="inline-flex h-10 items-center">
+                              {index + 1}
+                            </span>
+                          </TableCell>
+                          <TableCell className="px-3 py-2 align-top">
+                            <PartnerLogoCell
+                              value={watch(`partners.items.${index}.logo`)}
+                              name={watch(`partners.items.${index}.name`)}
+                              onChange={(url) =>
+                                setValue(`partners.items.${index}.logo`, url, {
+                                  shouldValidate: true,
+                                })
+                              }
+                            />
+                            <FieldError message={rowErrors?.logo?.message} />
+                          </TableCell>
+                          <TableCell className="px-3 py-2 align-top">
+                            <Input
+                              aria-label="Tên đối tác"
+                              {...register(`partners.items.${index}.name`)}
+                            />
+                            <FieldError message={rowErrors?.name?.message} />
+                          </TableCell>
+                          <TableCell className="px-3 py-2 align-top">
+                            <Input
+                              type="text"
+                              inputMode="url"
+                              aria-label="Link"
+                              placeholder="https://… hoặc amway.com"
+                              {...register(`partners.items.${index}.href`, {
+                                /* Gõ thiếu https:// → tự thêm khi rời ô */
+                                onBlur: (event) => {
+                                  const normalized = normalizePartnerHref(
+                                    event.target.value,
+                                  );
+                                  if (normalized) {
+                                    setValue(`partners.items.${index}.href`, normalized, {
+                                      shouldValidate: true,
+                                    });
+                                  }
+                                },
+                              })}
+                            />
+                            <FieldError message={rowErrors?.href?.message} />
+                          </TableCell>
+                          <TableCell className="px-3 py-2 align-top">
+                            <div className="flex justify-end">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                disabled={fields.length <= 1}
+                                onClick={() => remove(index)}
+                                aria-label="Xóa đối tác"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </>
+                      )}
+                    </SortableTableRow>
+                  );
+                })}
+              </TableBody>
+            </SortableContext>
+          </DndContext>
+        </Table>
+      </div>
       <Button
         type="button"
         variant="outline"
@@ -251,6 +544,9 @@ function PartnerFields({
         <Plus className="h-4 w-4" />
         Thêm đối tác
       </Button>
+      <FieldError
+        message={errors.partners?.items?.root?.message ?? errors.partners?.items?.message}
+      />
     </div>
   );
 }
@@ -277,13 +573,22 @@ export function AboutPageForm({
   });
 
   const {
-    fields: groups,
-    append: appendGroup,
-    remove: removeGroup,
+    fields: blockFields,
+    append: appendBlock,
+    insert: insertBlock,
+    remove: removeBlock,
+    move: moveBlock,
   } = useFieldArray({
     control,
-    name: "awards.groups",
+    name: "blocks",
   });
+  const blocks = watch("blocks");
+  /* Khối mới vào cuối phần trên (ngay trước Brand break). */
+  const addBlock = (block: AboutContentBlock) => {
+    const breakIndex = breakIndexOf(blocks);
+    if (breakIndex < 0) appendBlock(block);
+    else insertBlock(breakIndex, block);
+  };
 
   const onSubmit = async (data: AboutPageContent) => {
     setIsSubmitting(true);
@@ -309,80 +614,141 @@ export function AboutPageForm({
       />
       <FieldError message={errors.heroImage?.message} />
 
-      <CoverImagePicker
-        label="Ảnh brand break"
-        description="Ảnh màn TETRIS DESIGN"
-        value={watch("brandBreakImage")}
-        onChange={(url) =>
-          setValue("brandBreakImage", url, { shouldValidate: true })
-        }
-      />
-      <FieldError message={errors.brandBreakImage?.message} />
-
       <section className="space-y-4">
-        <h2 className="text-lg font-semibold">Giới thiệu</h2>
-        <div className="space-y-2">
-          <Label>Tiêu đề</Label>
-          <Input {...register("introduction.title")} />
-          <FieldError message={errors.introduction?.title?.message} />
+        <div>
+          <h2 className="text-lg font-semibold">Khối nội dung</h2>
+          <p className="text-sm text-muted-foreground">
+            Trang Giới thiệu hiển thị đúng thứ tự từ trên xuống dưới như danh
+            sách này (sau Ảnh hero, trước Đối tác). Dùng ↑ ↓ để sắp xếp; cần ít
+            nhất một khối trước và sau Brand break.
+          </p>
         </div>
-        <StringList
-          label="Đoạn văn"
-          values={watch("introduction.paragraphs")}
-          onChange={(next) =>
-            setValue("introduction.paragraphs", next, { shouldValidate: true })
-          }
-          error={errors.introduction?.paragraphs?.message}
-        />
-      </section>
+        {blockFields.map((field, index) => {
+          const block = blocks[index] ?? field;
+          const blockErrors = errors.blocks?.[index] as BlockErrors | undefined;
+          const isBreak = field.type === "brandBreak";
+          const moveButtons = (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                disabled={!canMoveBlock(blocks, index, index - 1)}
+                onClick={() => moveBlock(index, index - 1)}
+                aria-label="Chuyển lên"
+              >
+                <ArrowUp className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                disabled={!canMoveBlock(blocks, index, index + 1)}
+                onClick={() => moveBlock(index, index + 1)}
+                aria-label="Chuyển xuống"
+              >
+                <ArrowDown className="h-4 w-4" />
+              </Button>
+            </>
+          );
 
-      <section className="space-y-4">
-        <h2 className="text-lg font-semibold">Giải thưởng</h2>
-        <div className="space-y-2">
-          <Label>Tiêu đề mục</Label>
-          <Input {...register("awards.title")} />
-          <FieldError message={errors.awards?.title?.message} />
-        </div>
-        {groups.map((group, index) => (
-          <AwardGroupFields
-            key={group.id}
-            groupIndex={index}
-            control={control}
-            register={register}
-            errors={errors}
-            canRemove={groups.length > 1}
-            onRemove={() => removeGroup(index)}
-          />
-        ))}
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() =>
-            appendGroup({
-              title: "",
-              items: [{ year: new Date().getFullYear(), title: "" }],
-            })
+          if (isBreak) {
+            return (
+              <div
+                key={field.id}
+                className="space-y-4 rounded-md border-2 border-dashed bg-muted/40 p-4"
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="mr-auto text-sm font-semibold">
+                    {index + 1}. Brand break (TETRIS DESIGN)
+                  </p>
+                  {moveButtons}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Khối phía trên: hiện trong ảnh hero, mờ dần theo cuộn. Khối
+                  phía dưới: tiêu đề chữ nảy, nội dung hiện dần, trước Đối tác.
+                </p>
+                <CoverImagePicker
+                  label="Ảnh brand break"
+                  description="Ảnh màn TETRIS DESIGN"
+                  value={watch("brandBreakImage")}
+                  onChange={(url) =>
+                    setValue("brandBreakImage", url, { shouldValidate: true })
+                  }
+                />
+                <FieldError message={errors.brandBreakImage?.message} />
+              </div>
+            );
           }
-        >
-          <Plus className="h-4 w-4" />
-          Thêm nhóm giải thưởng
-        </Button>
-      </section>
 
-      <section className="space-y-4">
-        <h2 className="text-lg font-semibold">Hành trình</h2>
-        <div className="space-y-2">
-          <Label>Tiêu đề</Label>
-          <Input {...register("journey.title")} />
-          <FieldError message={errors.journey?.title?.message} />
+          return (
+            <div key={field.id} className="space-y-4 rounded-md border p-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="mr-auto text-sm font-semibold">
+                  {index + 1}. {BLOCK_TYPE_LABELS[field.type]}
+                </p>
+                {moveButtons}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  disabled={!canRemoveBlock(blocks, index)}
+                  onClick={() => removeBlock(index)}
+                  aria-label="Xóa khối"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor={`about-block-${index}-title`}>Tiêu đề</Label>
+                <Input
+                  id={`about-block-${index}-title`}
+                  {...register(`blocks.${index}.title`)}
+                />
+                <FieldError message={blockErrors?.title?.message} />
+              </div>
+              {field.type === "text" ? (
+                <StringList
+                  label="Đoạn văn"
+                  values={(block as AboutTextBlock).paragraphs ?? [""]}
+                  onChange={(next) =>
+                    setValue(`blocks.${index}.paragraphs`, next, {
+                      shouldValidate: true,
+                    })
+                  }
+                  error={paragraphsErrorMessage(blockErrors?.paragraphs)}
+                />
+              ) : (
+                <AwardsBlockGroups
+                  blockIndex={index}
+                  control={control}
+                  register={register}
+                  errors={blockErrors}
+                />
+              )}
+            </div>
+          );
+        })}
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => addBlock(newTextBlock())}
+          >
+            <Plus className="h-4 w-4" />
+            Thêm khối văn bản
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => addBlock(newAwardsBlock())}
+          >
+            <Plus className="h-4 w-4" />
+            Thêm khối giải thưởng
+          </Button>
         </div>
-        <StringList
-          label="Đoạn văn"
-          values={watch("journey.paragraphs")}
-          onChange={(next) =>
-            setValue("journey.paragraphs", next, { shouldValidate: true })
-          }
-          error={errors.journey?.paragraphs?.message}
+        <FieldError
+          message={errors.blocks?.root?.message ?? errors.blocks?.message}
         />
       </section>
 

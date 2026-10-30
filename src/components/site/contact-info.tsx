@@ -20,30 +20,30 @@ export function ContactInfo({ contact, className }: ContactInfoProps) {
         )}
       >
         <p className="contact-info-item">
-          <span className="contact-info-label site-label-text">Email:</span>{" "}
+          <span className="contact-info-label site-label-text ts-label">Email:</span>{" "}
           <a
             href={`mailto:${contact.email}`}
-            className="contact-info-value"
+            className="contact-info-value ts-body"
           >
             {contact.email}
           </a>
         </p>
         <p className="contact-info-item">
-          <span className="contact-info-label site-label-text">Số điện thoại:</span>{" "}
-          <a href={`tel:${phoneHref}`} className="contact-info-value">
+          <span className="contact-info-label site-label-text ts-label">Số điện thoại:</span>{" "}
+          <a href={`tel:${phoneHref}`} className="contact-info-value ts-body">
             {contact.phone}
           </a>
         </p>
         <p className="contact-info-item">
-          <span className="contact-info-label site-label-text">Địa chỉ:</span>{" "}
-          <span className="contact-info-value">{contact.address}</span>
+          <span className="contact-info-label site-label-text ts-label">Địa chỉ:</span>{" "}
+          <span className="contact-info-value ts-body">{contact.address}</span>
         </p>
         {taxCode ? (
           <p className="contact-info-item">
-            <span className="contact-info-label site-label-text">
+            <span className="contact-info-label site-label-text ts-label">
               Mã số thuế:
             </span>{" "}
-            <span className="contact-info-value">{taxCode}</span>
+            <span className="contact-info-value ts-body">{taxCode}</span>
           </p>
         ) : null}
       </div>

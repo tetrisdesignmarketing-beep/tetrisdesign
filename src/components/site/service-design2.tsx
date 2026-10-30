@@ -57,9 +57,9 @@ export function ServiceDesign2({ services }: ServiceDesign2Props) {
               {service.title}
             </span>
             <div {...getPanelProps(index)} className="service-design2__panel">
-              <h2 className="service-design2__title">{service.title}</h2>
-              {label ? <p className="service-design2__label">{label}</p> : null}
-              <p className="service-design2__desc">{service.description}</p>
+              <h2 className="service-design2__title ts-display">{service.title}</h2>
+              {label ? <p className="service-design2__label ts-label">{label}</p> : null}
+              <p className="service-design2__desc ts-body">{service.description}</p>
             </div>
             {/* Nút phủ kín cột: cả cột là vùng rê chuột / bấm để chọn. */}
             <button {...getTabProps(index)} className="service-design2__hit">

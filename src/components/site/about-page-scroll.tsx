@@ -5,6 +5,7 @@ import { AboutHeroSection } from "@/components/site/about-hero-section";
 import { AwardsList } from "@/components/site/awards-list";
 import { BrandBreakSection } from "@/components/site/brand-break-section";
 import { ContentSection } from "@/components/site/content-section";
+import { splitAboutBlocks } from "@/lib/about-blocks";
 import type {
   AboutPageContent,
   ContactPageContent,
@@ -29,6 +30,10 @@ export function AboutPageScroll({
   contact,
   variant = "pin",
 }: AboutPageScrollProps) {
+  /* Trước vạch Brand break = trong hero (mờ theo cuộn); sau = cùng khối Đối tác. */
+  const { top: topBlocks, bottom: bottomBlocks } = splitAboutBlocks(
+    content.blocks,
+  );
   return (
     <>
       <AboutHeroSection
@@ -36,27 +41,32 @@ export function AboutPageScroll({
         alt="Đội ngũ Tetris Design"
       >
         <div className="mx-auto max-w-3xl px-[var(--site-header-pad-inline)]">
-          <ContentSection
-            title={content.introduction.title}
-            paragraphs={content.introduction.paragraphs}
-            className="pb-4 pt-0"
-            bodyClassName="mt-3"
-            scrollBlur
-          />
-          <AboutAwardsSection>
-            <AwardsList
-              title={content.awards.title}
-              groups={content.awards.groups}
-              className="pb-8 pt-2"
-            />
-          </AboutAwardsSection>
+          {topBlocks.map((block, index) =>
+            block.type === "awards" ? (
+              <AboutAwardsSection key={index}>
+                <AwardsList
+                  title={block.title}
+                  groups={block.groups}
+                  className="pb-8 pt-2"
+                />
+              </AboutAwardsSection>
+            ) : (
+              <ContentSection
+                key={index}
+                title={block.title}
+                paragraphs={block.paragraphs}
+                className={index === 0 ? "pb-4 pt-0" : "pb-4 pt-2"}
+                bodyClassName="mt-3"
+                scrollBlur
+              />
+            ),
+          )}
         </div>
       </AboutHeroSection>
       <BrandBreakSection
         image={content.brandBreakImage}
         imageAlt="Đội ngũ Tetris Design"
-        journeyTitle={content.journey.title}
-        journeyParagraphs={content.journey.paragraphs}
+        blocks={bottomBlocks}
         partnersTitle={content.partners.title}
         partners={content.partners.items}
         contact={contact}

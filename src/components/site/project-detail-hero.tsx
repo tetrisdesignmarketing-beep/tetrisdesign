@@ -30,10 +30,10 @@ export function ProjectDetailHero({
         />
       </div>
       <div className="mx-auto max-w-3xl px-4 py-8">
-        <h1 className="text-xl font-bold uppercase tracking-[var(--tracking-label)] md:text-2xl">
+        <h1 className="ts-display text-xl font-bold uppercase tracking-[var(--tracking-label)] md:text-2xl">
           {project.title}
         </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
+        <p className="ts-body mt-2 text-sm text-muted-foreground">
           {project.categoryLabel} | {project.location}
         </p>
       </div>

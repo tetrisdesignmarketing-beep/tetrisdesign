@@ -5,7 +5,7 @@
 | Font | File |
 |------|------|
 | Fashion Didot W90 Regular (logo) | `FashionDidotW90-Regular.woff2` |
-| Darker Grotesque 400 / 500 / 600 / 700 — UI chính (SIL OFL, `DarkerGrotesque-OFL.txt`) | `DarkerGrotesque-{Regular,Medium,SemiBold,Bold}.woff2` |
+| Darker Grotesque 300 / 400 / 500 / 600 / 700 / 800 / 900 — UI chính (SIL OFL, `DarkerGrotesque-OFL.txt`); 300/800/900 chỉ tải khi admin chọn ở Kiểu chữ | `DarkerGrotesque-{Light,Regular,Medium,SemiBold,Bold,ExtraBold,Black}.woff2` |
 | Neue Einstellung Regular 400 — dự phòng | `NeueEinstellung-Regular.woff2` |
 | Neue Einstellung Medium 500 — label, menu | `NeueEinstellung-Medium.woff2` |
 | Neue Einstellung Bold 700 | `NeueEinstellung-Bold.woff2` |

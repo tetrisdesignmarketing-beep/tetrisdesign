@@ -37,11 +37,11 @@ export function ProjectDetailContent({
       )}
     >
       {meta ? (
-        <p className="site-label-text uppercase tracking-[var(--tracking-label)] text-muted-foreground">
+        <p className="ts-label site-label-text uppercase tracking-[var(--tracking-label)] text-muted-foreground">
           {meta}
         </p>
       ) : null}
-      <div className="mt-6 space-y-4 text-base leading-relaxed text-foreground md:text-lg">
+      <div className="ts-body mt-6 space-y-4 text-base leading-relaxed text-foreground md:text-lg">
         {paragraphs.map((paragraph, index) => (
           <p key={index} className="whitespace-pre-line">
             {paragraph}

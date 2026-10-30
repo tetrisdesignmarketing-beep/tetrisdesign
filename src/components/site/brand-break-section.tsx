@@ -7,15 +7,18 @@ import {
   useBrandBreakLogoEnter,
   useBrandBreakScroll,
 } from "@/hooks/use-brand-break-scroll";
-import type { ContactPageContent } from "@/lib/validations/site-page";
+import type {
+  AboutContentBlock,
+  ContactPageContent,
+} from "@/lib/validations/site-page";
 import type { AboutScrollVariant } from "@/lib/about-variant";
 import { cn } from "@/lib/utils";
 
 interface BrandBreakSectionProps {
   image: string;
   imageAlt: string;
-  journeyTitle: string;
-  journeyParagraphs: readonly string[];
+  /** Khối nội dung "dưới brand break" — hiện trước Đối tác. */
+  blocks: readonly AboutContentBlock[];
   partnersTitle: string;
   partners: readonly { name: string; logo: string; href?: string }[];
   className?: string;
@@ -26,8 +29,7 @@ interface BrandBreakSectionProps {
 export function BrandBreakSection({
   image,
   imageAlt,
-  journeyTitle,
-  journeyParagraphs,
+  blocks,
   partnersTitle,
   partners,
   className,
@@ -59,8 +61,7 @@ export function BrandBreakSection({
         </div>
       </div>
       <ContentPartnerSection
-        journeyTitle={journeyTitle}
-        journeyParagraphs={journeyParagraphs}
+        blocks={blocks}
         partnersTitle={partnersTitle}
         partners={partners}
         lettersSectionId="about-brand-break"

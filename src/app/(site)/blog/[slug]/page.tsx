@@ -66,18 +66,18 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
     <article className="mx-auto w-full max-w-3xl px-4 py-10">
       <Link
         href="/blog"
-        className="text-xs font-medium uppercase tracking-[var(--tracking-label)] text-muted-foreground transition-colors hover:text-brand-red"
+        className="ts-label text-xs font-medium uppercase tracking-[var(--tracking-label)] text-muted-foreground transition-colors hover:text-brand-red"
       >
         ← Tin tức
       </Link>
 
       <header className="mb-8 mt-8">
-        <h1 className="text-2xl font-medium uppercase tracking-[var(--tracking-title)] md:text-3xl">
+        <h1 className="ts-display text-2xl font-medium uppercase tracking-[var(--tracking-title)] md:text-3xl">
           {post.title}
         </h1>
         <time
           dateTime={post.createdAt.toISOString()}
-          className="mt-3 block text-sm text-muted-foreground"
+          className="ts-caption mt-3 block text-sm text-muted-foreground"
         >
           {new Date(post.createdAt).toLocaleDateString("vi-VN", {
             day: "numeric",
@@ -86,7 +86,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
           })}
         </time>
         {post.excerpt && (
-          <p className="mt-4 text-base text-muted-foreground">{post.excerpt}</p>
+          <p className="ts-body mt-4 text-base text-muted-foreground">{post.excerpt}</p>
         )}
       </header>
 

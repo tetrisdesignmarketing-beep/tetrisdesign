@@ -28,6 +28,11 @@ export const ADMIN_LAYOUT_PAGES: Record<
     label: "Liên hệ",
     description: "Email, SĐT, địa chỉ chi tiết + tỉnh/TP Việt Nam",
   },
+  typography: {
+    label: "Kiểu chữ",
+    description:
+      "Độ đậm, nghiêng, gạch chân, chữ hoa, giãn chữ cho từng nhóm chữ — áp dụng mọi trang",
+  },
 };
 
 export const ADMIN_LAYOUT_PAGE_LIST = SITE_PAGE_SLUGS.map((slug) => ({

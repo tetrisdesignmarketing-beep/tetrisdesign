@@ -50,7 +50,7 @@ export function ProjectFilter({ stickTo = "header" }: ProjectFilterProps) {
                   setCategory(isActive ? null : category.id);
                 }}
                 className={cn(
-                  "inline-flex min-h-11 items-center justify-center touch-manipulation site-label-text uppercase tracking-[var(--tracking-label-wide)]",
+                  "ts-label inline-flex min-h-11 items-center justify-center touch-manipulation site-label-text uppercase tracking-[var(--tracking-label-wide)]",
                   isActive
                     ? "text-brand-red"
                     : "text-foreground hover:text-brand-red",

@@ -138,11 +138,11 @@ export function ServiceSection({
         <div data-service-copy="">
           <h2
             data-service-title=""
-            className="site-label-text uppercase"
+            className="ts-heading site-label-text uppercase"
           >
             {title}
           </h2>
-          <p className="mt-[8px] text-sm leading-relaxed text-muted-foreground">
+          <p className="ts-body mt-[8px] text-sm leading-relaxed text-muted-foreground">
             {description}
           </p>
         </div>

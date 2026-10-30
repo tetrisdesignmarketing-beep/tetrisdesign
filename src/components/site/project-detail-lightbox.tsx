@@ -728,7 +728,7 @@ export function ProjectDetailLightbox({
       </div>
 
       <div ref={chromeRef} className="project-detail-lightbox__chrome">
-        <p className="project-detail-lightbox__count">
+        <p className="project-detail-lightbox__count ts-caption">
           {String(current + 1).padStart(2, "0")} /{" "}
           {String(count).padStart(2, "0")}
         </p>

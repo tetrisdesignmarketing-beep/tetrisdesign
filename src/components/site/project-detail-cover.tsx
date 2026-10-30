@@ -33,15 +33,15 @@ export function ProjectDetailCover({
       <div className="project-detail-cover__scrim" aria-hidden />
       <Link
         href="/projects"
-        className="absolute left-4 top-4 z-10 text-xs font-medium uppercase tracking-[var(--tracking-label)] text-white/70 transition-colors hover:text-white"
+        className="ts-label absolute left-4 top-4 z-10 text-xs font-medium uppercase tracking-[var(--tracking-label)] text-white/70 transition-colors hover:text-white"
       >
         ← Dự án
       </Link>
       <div className="project-detail-cover__copy">
-        <h1 id="project-detail-title" className="project-detail-cover__title">
+        <h1 id="project-detail-title" className="project-detail-cover__title ts-display">
           {title}
         </h1>
-        <p className="project-detail-cover__meta">
+        <p className="project-detail-cover__meta ts-caption">
           {concept} | {address}
         </p>
       </div>

@@ -12,7 +12,7 @@ interface SiteStatusPageProps {
 }
 
 const linkClass =
-  "site-label-text inline-flex items-center justify-center border border-foreground px-5 py-3 uppercase tracking-[var(--tracking-label)] transition-colors hover:border-brand-red hover:text-brand-red";
+  "ts-label site-label-text inline-flex items-center justify-center border border-foreground px-5 py-3 uppercase tracking-[var(--tracking-label)] transition-colors hover:border-brand-red hover:text-brand-red";
 
 /** Khung trang lỗi / 404 theo giao diện site (font UI --font-ui, label menu). */
 export function SiteStatusPage({
@@ -29,13 +29,13 @@ export function SiteStatusPage({
         className,
       )}
     >
-      <p className="site-label-text uppercase tracking-[var(--tracking-label-wide)] text-muted-foreground">
+      <p className="ts-label site-label-text uppercase tracking-[var(--tracking-label-wide)] text-muted-foreground">
         {code}
       </p>
-      <h1 className="mt-6 text-2xl uppercase tracking-[var(--tracking-title)] md:text-3xl">
+      <h1 className="ts-display mt-6 text-2xl uppercase tracking-[var(--tracking-title)] md:text-3xl">
         {title}
       </h1>
-      <p className="mt-4 max-w-md text-base leading-relaxed text-muted-foreground">
+      <p className="ts-body mt-4 max-w-md text-base leading-relaxed text-muted-foreground">
         {description}
       </p>
       <div className="mt-10 flex flex-wrap items-center justify-center gap-3">

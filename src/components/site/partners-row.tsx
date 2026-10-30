@@ -6,7 +6,7 @@ import {
   PARTNER_LOGO_FULL_WIDTH,
   PARTNER_LOGO_PREVIEW_WIDTH,
 } from "@/lib/optimized-image-src";
-import type { CSSProperties } from "react";
+import { type CSSProperties, useEffect, useRef, useState } from "react";
 import { normalizePartnerHref } from "@/lib/partner-href";
 import { cn } from "@/lib/utils";
 
@@ -41,23 +41,72 @@ function buildLoopSlides(partners: readonly Partner[]): Partner[] {
   return slides;
 }
 
+/* Equal visual weight: logo height ∝ 1/√(width/height) → same visible area
+   whatever the shape (wide logos get shorter, square ones taller). */
+const LOGO_SQUARE_SCALE = 0.8;
+const LOGO_MIN_SCALE = 0.35;
+
+function logoScaleForRatio(ratio: number) {
+  return Math.min(1, Math.max(LOGO_MIN_SCALE, LOGO_SQUARE_SCALE / Math.sqrt(ratio)));
+}
+
+/** Reads the logo's natural aspect ratio from whichever layer loads first. */
+function useLogoScale() {
+  const ref = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(LOGO_SQUARE_SCALE);
+
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    const measure = (img: HTMLImageElement) => {
+      /* SVG without intrinsic size reports 0 → keep the default. */
+      if (!img.naturalWidth || !img.naturalHeight) return;
+      setScale(logoScaleForRatio(img.naturalWidth / img.naturalHeight));
+    };
+    /* `load` doesn't bubble but does go through the capture phase. */
+    const onLoad = (event: Event) => {
+      if (event.target instanceof HTMLImageElement) measure(event.target);
+    };
+    node.addEventListener("load", onLoad, true);
+    /* Cached images may have finished before the listener was attached. */
+    const frame = window.requestAnimationFrame(() => {
+      node.querySelectorAll("img").forEach((img) => {
+        if (img.complete) measure(img);
+      });
+    });
+    return () => {
+      node.removeEventListener("load", onLoad, true);
+      window.cancelAnimationFrame(frame);
+    };
+  }, []);
+
+  return [ref, scale] as const;
+}
+
 function PartnerLogo({
   name,
   logo,
   href,
   hidden = false,
 }: Partner & { hidden?: boolean }) {
+  const [logoRef, logoScale] = useLogoScale();
   const image = (
-    <div className="relative h-16 w-full md:h-24 lg:h-28">
-      <ProgressiveImage
-        src={logo}
-        alt={name}
-        previewWidth={PARTNER_LOGO_PREVIEW_WIDTH}
-        fullWidth={PARTNER_LOGO_FULL_WIDTH}
-        fade={false}
-        className="object-contain object-center"
-        sizes="(min-width: 1024px) 200px, (min-width: 768px) 160px, 30vw"
-      />
+    <div className="flex h-16 w-full items-center md:h-24 lg:h-28">
+      <div
+        ref={logoRef}
+        className="relative w-full"
+        style={{ height: `${logoScale * 100}%` }}
+      >
+        <ProgressiveImage
+          src={logo}
+          alt={name}
+          previewWidth={PARTNER_LOGO_PREVIEW_WIDTH}
+          fullWidth={PARTNER_LOGO_FULL_WIDTH}
+          fade={false}
+          className="object-contain object-center"
+          sizes="(min-width: 1024px) 200px, (min-width: 768px) 160px, 30vw"
+        />
+      </div>
     </div>
   );
 
@@ -115,7 +164,7 @@ export function PartnersRow({
       <h2
         data-section-title=""
         data-ml2-heading={headingEffect === "ml2" ? "" : undefined}
-        className="site-label-text text-center uppercase"
+        className="ts-heading site-label-text text-center uppercase"
       >
         {headingEffect === "ml2" ? (
           <MovingLettersPop

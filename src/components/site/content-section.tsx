@@ -50,7 +50,7 @@ export function ContentSection({
         data-section-title=""
         data-ml7-heading={movingLetters ? "" : undefined}
         data-ml2-heading={headingEffect === "ml2" ? "" : undefined}
-        className="site-label-text uppercase"
+        className="ts-heading site-label-text uppercase"
       >
         {scrollBlur ? <span data-scroll-blur="">{titleNode}</span> : titleNode}
       </h2>
@@ -64,7 +64,7 @@ export function ContentSection({
         {paragraphs.map((paragraph) => (
           <p
             key={paragraph.slice(0, 40)}
-            className="text-sm leading-relaxed text-muted-foreground"
+            className="ts-body text-sm leading-relaxed text-muted-foreground"
           >
             {movingLetters ? (
               <MovingLettersScale text={paragraph} />

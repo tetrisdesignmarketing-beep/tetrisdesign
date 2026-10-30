@@ -12,7 +12,7 @@ export function AboutAwardsSection({
 }: AboutAwardsSectionProps) {
   return (
     <div
-      id="about-awards"
+      data-about-awards=""
       data-about-grid-deep-zone=""
       className={cn(className)}
     >

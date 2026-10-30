@@ -55,51 +55,61 @@ export const siteSocial = {
 
 export interface AwardGroup {
   title: string;
-  items: { year: number; title: string }[];
+  items: { year: number; title: string; project?: string }[];
 }
 
 export const siteAbout = {
   heroImage: "/site/about/about1.png",
   brandBreakImage: "/site/about/about2.png",
-  introduction: {
-    title: "GIỚI THIỆU",
-    paragraphs: [
-      "Tetris Design là công ty chuyên thiết kế và thi công nội thất các không gian thương mại như nhà hàng, showroom, bán lẻ, khách sạn và spa. Đội ngũ kiến trúc sư và designer giàu kinh nghiệm của chúng tôi luôn đặt con người làm trung tâm, hướng tới các giải pháp bền vững và có tính ứng dụng cao.",
-    ],
-  },
-  awards: {
-    title: "GIẢI THƯỞNG",
-    groups: [
-      {
-        title: "Kiến trúc sư Đặng Hữu Trọng",
-        items: [
-          { year: 2018, title: "Giải thưởng AYDA Vietnam" },
-          { year: 2019, title: "Asia Young Designer of the Year" },
-          { year: 2019, title: "Học bổng Harvard GSD" },
-        ],
-      },
-      {
-        title: "Tetris Design",
-        items: [
-          {
-            year: 2026,
-            title: "Best F&B Interior Design in Asia — Genji Steak",
-          },
-          {
-            year: 2026,
-            title: "VMARK Vietnam Design Award (Silver) — Flush Coffee",
-          },
-        ],
-      },
-    ] satisfies AwardGroup[],
-  },
-  journey: {
-    title: "HÀNH TRÌNH",
-    paragraphs: [
-      "Thành lập năm 2018, Tetris Design là công ty năng động chuyên thiết kế kiến trúc và nội thất. Sứ mệnh của chúng tôi là biến mỗi không gian thành một tác phẩm vừa đẹp vừa có tính ứng dụng cao.",
-      "Chúng tôi kết hợp chuyên môn kỹ thuật với tư duy thẩm mỹ, lắng nghe nhu cầu từng khách hàng để kiến tạo môi trường sống và làm việc truyền cảm hứng — cân bằng giữa hình thức và trải nghiệm sử dụng thực tế.",
-    ],
-  },
+  /* Khối nội dung — trang hiển thị đúng thứ tự này (chỉnh ở admin); trước
+     `brandBreak` = trong hero, sau = dưới brand break. */
+  blocks: [
+    {
+      type: "text",
+      title: "GIỚI THIỆU",
+      paragraphs: [
+        "Tetris Design là công ty chuyên thiết kế và thi công nội thất các không gian thương mại như nhà hàng, showroom, bán lẻ, khách sạn và spa. Đội ngũ kiến trúc sư và designer giàu kinh nghiệm của chúng tôi luôn đặt con người làm trung tâm, hướng tới các giải pháp bền vững và có tính ứng dụng cao.",
+      ],
+    },
+    {
+      type: "awards",
+      title: "GIẢI THƯỞNG",
+      groups: [
+        {
+          title: "Kiến trúc sư Đặng Hữu Trọng",
+          items: [
+            { year: 2018, title: "Giải thưởng AYDA Vietnam" },
+            { year: 2019, title: "Asia Young Designer of the Year" },
+            { year: 2019, title: "Học bổng Harvard GSD" },
+          ],
+        },
+        {
+          title: "Tetris Design",
+          items: [
+            {
+              year: 2026,
+              title: "Best F&B Interior Design in Asia",
+              project: "Genji Steak",
+            },
+            {
+              year: 2026,
+              title: "VMARK Vietnam Design Award (Silver)",
+              project: "Flush Coffee",
+            },
+          ],
+        },
+      ] satisfies AwardGroup[],
+    },
+    { type: "brandBreak" },
+    {
+      type: "text",
+      title: "HÀNH TRÌNH",
+      paragraphs: [
+        "Thành lập năm 2018, Tetris Design là công ty năng động chuyên thiết kế kiến trúc và nội thất. Sứ mệnh của chúng tôi là biến mỗi không gian thành một tác phẩm vừa đẹp vừa có tính ứng dụng cao.",
+        "Chúng tôi kết hợp chuyên môn kỹ thuật với tư duy thẩm mỹ, lắng nghe nhu cầu từng khách hàng để kiến tạo môi trường sống và làm việc truyền cảm hứng — cân bằng giữa hình thức và trải nghiệm sử dụng thực tế.",
+      ],
+    },
+  ],
   partners: {
     title: "ĐỐI TÁC",
     items: [

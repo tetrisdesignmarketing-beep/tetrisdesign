@@ -3,6 +3,15 @@ import { VN_PROVINCES } from "@/lib/vn-provinces";
 import { mediaPathSchema } from "@/lib/validations/shared";
 import { isValidPartnerHref, normalizePartnerHref } from "@/lib/partner-href";
 import {
+  TYPOGRAPHY_GROUPS,
+  TYPOGRAPHY_ITALIC,
+  TYPOGRAPHY_TRACKING,
+  TYPOGRAPHY_TRANSFORM,
+  TYPOGRAPHY_UNDERLINE,
+  TYPOGRAPHY_WEIGHTS,
+  type TypographyGroup,
+} from "@/lib/site-typography";
+import {
   isValidSocialHref,
   normalizeSocialHref,
   type SocialKey,
@@ -14,6 +23,7 @@ export const SITE_PAGE_SLUGS = [
   "projects",
   "services",
   "contact",
+  "typography",
 ] as const;
 
 export const sitePageSlugSchema = z.enum(SITE_PAGE_SLUGS);
@@ -58,8 +68,42 @@ export const homePageFormSchema = z.object({
 
 const awardItemSchema = z.object({
   year: z.number().int().min(1900).max(3000),
-  title: z.string().min(1).max(300),
+  /** Tên giải — in đậm trên trang. */
+  title: z.string().min(1, "Tên giải không được để trống").max(300),
+  /** Dự án / ghi chú sau tên giải (vd. "Genji Steak") — chữ thường. */
+  project: z.string().max(300).optional(),
 });
+
+const LEGACY_AWARD_SEPARATOR = /\s+[—–]\s+/;
+
+/**
+ * Giải lưu trước khi có `project`: "Tên giải — Dự án" trong 1 ô `title` →
+ * tách ở dấu gạch dài đầu tiên. Chỉ chạy khi chưa có `project` (lưu từ admin
+ * luôn có, kể cả rỗng) nên không tách lại lần 2.
+ */
+function splitLegacyAwardItems(blocks: unknown[]): unknown[] {
+  return blocks.map((block) => {
+    const record = block as Record<string, unknown> | null;
+    if (record?.type !== "awards" || !Array.isArray(record.groups)) return block;
+    const groups = record.groups.map((group: Record<string, unknown> | null) => {
+      if (!group || !Array.isArray(group.items)) return group;
+      const items = group.items.map((item: Record<string, unknown> | null) => {
+        if (!item || item.project !== undefined || typeof item.title !== "string") {
+          return item;
+        }
+        const match = LEGACY_AWARD_SEPARATOR.exec(item.title);
+        if (!match) return item;
+        return {
+          ...item,
+          title: item.title.slice(0, match.index),
+          project: item.title.slice(match.index + match[0].length),
+        };
+      });
+      return { ...group, items };
+    });
+    return { ...record, groups };
+  });
+}
 
 const awardGroupSchema = z.object({
   title: z.string().min(1).max(200),
@@ -86,21 +130,99 @@ const partnerHrefFormSchema = z
     "Link không hợp lệ (vd. amway.com hoặc https://amway.com)",
   );
 
-export const aboutPageSchema = z.object({
+const aboutTextBlockSchema = z.object({
+  type: z.literal("text"),
+  title: z.string().min(1, "Tiêu đề không được để trống").max(200),
+  paragraphs: z
+    .array(z.string().min(1, "Đoạn văn không được để trống"))
+    .min(1, "Cần ít nhất một đoạn"),
+});
+
+const aboutAwardsBlockSchema = z.object({
+  type: z.literal("awards"),
+  title: z.string().min(1, "Tiêu đề không được để trống").max(200),
+  groups: z.array(awardGroupSchema).min(1, "Cần ít nhất một nhóm"),
+});
+
+/**
+ * Vạch Brand break trong danh sách khối — trang hiển thị đúng thứ tự admin:
+ * khối trước vạch nằm trong hero, khối sau vạch nằm dưới brand break.
+ * Ảnh vẫn ở `brandBreakImage` (admin hiển thị picker ngay tại dòng này).
+ */
+const aboutBrandBreakBlockSchema = z.object({
+  type: z.literal("brandBreak"),
+});
+
+const aboutBlockSchema = z.discriminatedUnion("type", [
+  aboutTextBlockSchema,
+  aboutAwardsBlockSchema,
+  aboutBrandBreakBlockSchema,
+]);
+
+/** Đúng 1 Brand break, có ≥ 1 khối trước và sau — animation hero / brand break cần chữ. */
+const aboutBlocksSchema = z.array(aboutBlockSchema).superRefine((blocks, ctx) => {
+  const breaks = blocks.filter((block) => block.type === "brandBreak").length;
+  if (breaks !== 1) {
+    ctx.addIssue({ code: "custom", message: "Cần đúng một mục Brand break" });
+    return;
+  }
+  const index = blocks.findIndex((block) => block.type === "brandBreak");
+  if (index === 0 || index === blocks.length - 1) {
+    ctx.addIssue({
+      code: "custom",
+      message: "Cần ít nhất một khối nội dung trước và sau Brand break",
+    });
+  }
+});
+
+/**
+ * Dữ liệu cũ → danh sách `blocks` có vạch Brand break, để nội dung đã lưu
+ * vẫn hiển thị đúng mà không cần migrate DB (lưu lại từ admin ghi kiểu mới):
+ * - introduction / awards / journey cố định;
+ * - blocks có `placement` (top/bottom) nhưng chưa có vạch.
+ */
+function migrateLegacyAboutContent(raw: unknown): unknown {
+  const migrated = migrateLegacyAboutBlocks(raw);
+  if (!migrated || typeof migrated !== "object" || Array.isArray(migrated)) {
+    return migrated;
+  }
+  const record = migrated as Record<string, unknown>;
+  if (!Array.isArray(record.blocks)) return migrated;
+  return { ...record, blocks: splitLegacyAwardItems(record.blocks) };
+}
+
+function migrateLegacyAboutBlocks(raw: unknown): unknown {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return raw;
+  const record = raw as Record<string, unknown>;
+  const brandBreak = { type: "brandBreak" };
+
+  if (Array.isArray(record.blocks)) {
+    const blocks = record.blocks as Array<Record<string, unknown> | null>;
+    const hasBreak = blocks.some((block) => block?.type === "brandBreak");
+    if (hasBreak || !blocks.some((block) => block && "placement" in block)) {
+      return raw;
+    }
+    const top = blocks.filter((block) => block?.placement !== "bottom");
+    const bottom = blocks.filter((block) => block?.placement === "bottom");
+    return { ...record, blocks: [...top, brandBreak, ...bottom] };
+  }
+
+  const { introduction, awards, journey, ...rest } = record;
+  if (!introduction && !awards && !journey) return raw;
+  const asObject = (value: unknown) =>
+    value && typeof value === "object" ? value : {};
+  const blocks: unknown[] = [];
+  if (introduction) blocks.push({ ...asObject(introduction), type: "text" });
+  if (awards) blocks.push({ ...asObject(awards), type: "awards" });
+  blocks.push(brandBreak);
+  if (journey) blocks.push({ ...asObject(journey), type: "text" });
+  return { ...rest, blocks };
+}
+
+const aboutPageBaseSchema = z.object({
   heroImage: mediaPathSchema,
   brandBreakImage: mediaPathSchema,
-  introduction: z.object({
-    title: z.string().min(1).max(200),
-    paragraphs: z.array(z.string().min(1)).min(1),
-  }),
-  awards: z.object({
-    title: z.string().min(1).max(200),
-    groups: z.array(awardGroupSchema).min(1),
-  }),
-  journey: z.object({
-    title: z.string().min(1).max(200),
-    paragraphs: z.array(z.string().min(1)).min(1),
-  }),
+  blocks: aboutBlocksSchema,
   partners: z.object({
     title: z.string().min(1).max(200),
     items: z
@@ -115,8 +237,13 @@ export const aboutPageSchema = z.object({
   }),
 });
 
+export const aboutPageSchema = z.preprocess(
+  migrateLegacyAboutContent,
+  aboutPageBaseSchema,
+);
+
 /** Form admin About — giống `aboutPageSchema`, chỉ khác `href` đối tác. */
-export const aboutPageFormSchema = aboutPageSchema.extend({
+export const aboutPageFormSchema = aboutPageBaseSchema.extend({
   partners: z.object({
     title: z.string().min(1).max(200),
     items: z
@@ -233,12 +360,30 @@ export const projectsPageSchema = z.object({
   note: z.string().optional(),
 });
 
+const typographyStyleSchema = z.object({
+  weight: z.enum(TYPOGRAPHY_WEIGHTS),
+  italic: z.enum(TYPOGRAPHY_ITALIC),
+  underline: z.enum(TYPOGRAPHY_UNDERLINE),
+  transform: z.enum(TYPOGRAPHY_TRANSFORM),
+  tracking: z.enum(TYPOGRAPHY_TRACKING),
+});
+
+/** Kiểu chữ toàn site — xem lib/site-typography.ts. */
+export const typographyPageSchema = z.object({
+  groups: z.object(
+    Object.fromEntries(
+      TYPOGRAPHY_GROUPS.map((group) => [group, typographyStyleSchema]),
+    ) as Record<TypographyGroup, typeof typographyStyleSchema>,
+  ),
+});
+
 export const sitePageSchemas = {
   home: homePageSchema,
   about: aboutPageSchema,
   projects: projectsPageSchema,
   services: servicesPageSchema,
   contact: contactPageSchema,
+  typography: typographyPageSchema,
 } as const;
 
 export function parseSitePageContent(slug: SitePageSlug, content: unknown) {
@@ -316,7 +461,13 @@ export function homeFormValuesToSlides(
   ]);
 }
 
-export type AboutPageContent = z.infer<typeof aboutPageSchema>;
+export type AboutPageContent = z.infer<typeof aboutPageBaseSchema>;
+export type AboutPageBlock = AboutPageContent["blocks"][number];
+/** Khối nội dung (không gồm vạch Brand break). */
+export type AboutContentBlock = Exclude<AboutPageBlock, { type: "brandBreak" }>;
+
+export type AboutTextBlock = z.infer<typeof aboutTextBlockSchema>;
+export type AboutAwardsBlock = z.infer<typeof aboutAwardsBlockSchema>;
 export type ServicesPageContent = z.infer<typeof servicesPageSchema>;
 /** Form admin Services — items có thể rỗng trước khi lưu. */
 export type ServicesPageFormValues = {

@@ -39,7 +39,7 @@ export function ServiceDesign1({ services }: ServiceDesign1Props) {
           <button
             key={service.title + index}
             {...getTabProps(index)}
-            className="services-showcase__title"
+            className="services-showcase__title ts-display"
           >
             {service.title}
           </button>
@@ -84,9 +84,9 @@ export function ServiceDesign1({ services }: ServiceDesign1Props) {
                 className="services-showcase__copy service-design1__copy"
               >
                 {label ? (
-                  <p className="services-showcase__label">{label}</p>
+                  <p className="services-showcase__label ts-label">{label}</p>
                 ) : null}
-                <p className="services-showcase__desc">{service.description}</p>
+                <p className="services-showcase__desc ts-body">{service.description}</p>
               </div>
             );
           })}

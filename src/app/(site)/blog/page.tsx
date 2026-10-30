@@ -55,10 +55,10 @@ export default async function BlogPage() {
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-10">
       <div className="mb-10">
-        <h1 className="text-2xl font-medium uppercase tracking-[var(--tracking-label)]">
+        <h1 className="ts-display text-2xl font-medium uppercase tracking-[var(--tracking-label)]">
           Tin tức
         </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
+        <p className="ts-body mt-2 text-sm text-muted-foreground">
           Các bài viết đã xuất bản
         </p>
       </div>
@@ -86,7 +86,7 @@ export default async function BlogPage() {
               />
             )}
             <CardHeader>
-              <CardTitle className="text-base font-medium uppercase tracking-[var(--tracking-title)]">
+              <CardTitle className="ts-heading text-base font-medium uppercase tracking-[var(--tracking-title)]">
                 <Link
                   href={`/blog/${post.slug}`}
                   className="hover:text-brand-red"
@@ -104,10 +104,10 @@ export default async function BlogPage() {
             </CardHeader>
             {post.excerpt && (
               <CardContent>
-                <p className="text-sm text-muted-foreground">{post.excerpt}</p>
+                <p className="ts-body text-sm text-muted-foreground">{post.excerpt}</p>
                 <Link
                   href={`/blog/${post.slug}`}
-                  className="mt-3 inline-block text-xs font-medium uppercase tracking-[var(--tracking-title)] hover:text-brand-red"
+                  className="ts-label mt-3 inline-block text-xs font-medium uppercase tracking-[var(--tracking-title)] hover:text-brand-red"
                 >
                   Đọc tiếp →
                 </Link>

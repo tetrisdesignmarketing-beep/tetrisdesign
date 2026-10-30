@@ -5,14 +5,25 @@ import { SiteJsonLd } from "@/components/site/site-json-ld";
 import { SiteLoadingIntro } from "@/components/site/site-loading-intro";
 import { SiteLoadingProvider } from "@/components/site/site-loading-context";
 import { SitePageReset } from "@/components/site/site-page-reset";
+import { getSiteTypography } from "@/lib/get-site-typography";
+import { buildTypographyCss } from "@/lib/site-typography";
 
-export default function SiteLayout({
+export default async function SiteLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  /* Kiểu chữ admin chỉnh (/admin/pages/typography) — chỉ thuộc tính đã đổi;
+     rỗng = giữ nguyên thiết kế. Lưu → revalidateSite() làm mới cả layout. */
+  const typographyCss = buildTypographyCss(await getSiteTypography());
   return (
     <SiteLoadingProvider>
+      {typographyCss ? (
+        <style
+          id="site-typography"
+          dangerouslySetInnerHTML={{ __html: typographyCss }}
+        />
+      ) : null}
       <SiteJsonLd />
       <ChunkErrorRecovery />
       <SiteLoadingIntro />

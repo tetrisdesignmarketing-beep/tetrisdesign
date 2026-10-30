@@ -86,7 +86,7 @@ export function SiteFooter({ className, contact }: SiteFooterProps) {
         <Link
           href={siteAdminLoginHref}
           prefetch={false}
-          className="site-footer-copyright"
+          className="site-footer-copyright ts-caption"
         >
           {siteBrand.copyright}
         </Link>

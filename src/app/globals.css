@@ -51,9 +51,11 @@
      nơi dùng. Trang khác: dùng class .site-label-text hoặc 2 biến này. */
   --site-label-font-size: 0.875rem;
   --site-label-font-weight: 700;
+  /* Mobile/tablet overlay menu — Darker Grotesque runs small, 14px read too tiny. */
+  --mobile-menu-font-size: clamp(1.25rem, 5vw, 1.5rem);
   /* Độ đậm chữ thường (nội dung, mô tả, tiêu đề không phải label) trên site
      public — đổi 1 chỗ, áp mọi nơi không đặt độ đậm riêng. Darker Grotesque
-     đang đóng gói 400/500/600/700 (xem @font-face). Admin giữ 400. */
+     đang đóng gói 300–900 (xem @font-face). Admin giữ 400. */
   --site-body-font-weight: 500;
   /* Khoảng cách chữ (letter-spacing) dùng chung — đổi 4 dòng này để chỉnh cả
      site (logo là SVG nên không bị ảnh hưởng). Đoạn văn nội dung giữ normal. */
@@ -496,7 +498,7 @@ html:has(#site-mobile-menu:target) .site-header-menu-toggle > span:not(.sr-only)
 
 /* Darker Grotesque (Google Fonts, SIL Open Font License — xem
    public/fonts/DarkerGrotesque-OFL.txt) — UI chính từ 10/2026, thay Neue Einstellung.
-   Đóng gói 400/500/600/700 (font-normal / medium / semibold / bold).
+   Đóng gói 300–900 (400–700 dùng sẵn; 300/800/900 cho Kiểu chữ admin).
    Bù kích thước để giữ bố cục cũ: font này chữ thường thấp hơn Neue (x-height
    0.407 so với 0.467) → size-adjust 114.7% cho chữ thường cao bằng Neue; ascent/
    descent override = số đo Neue (0.998 / 0.261) chia cho size-adjust → chiều cao
@@ -541,6 +543,44 @@ html:has(#site-mobile-menu:target) .site-header-menu-toggle > span:not(.sr-only)
   font-family: "Darker Grotesque";
   src: url("/fonts/DarkerGrotesque-Bold.woff2") format("woff2");
   font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  size-adjust: 114.7%;
+  ascent-override: 87%;
+  descent-override: 22.8%;
+  line-gap-override: 0%;
+}
+
+/* 300 / 800 / 900 — chỉ dùng khi admin chọn ở Kiểu chữ (/admin/pages/typography);
+   trình duyệt chỉ tải file khi có chữ dùng độ đậm đó. */
+@font-face {
+  font-family: "Darker Grotesque";
+  src: url("/fonts/DarkerGrotesque-Light.woff2") format("woff2");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+  size-adjust: 114.7%;
+  ascent-override: 87%;
+  descent-override: 22.8%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: "Darker Grotesque";
+  src: url("/fonts/DarkerGrotesque-ExtraBold.woff2") format("woff2");
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+  size-adjust: 114.7%;
+  ascent-override: 87%;
+  descent-override: 22.8%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: "Darker Grotesque";
+  src: url("/fonts/DarkerGrotesque-Black.woff2") format("woff2");
+  font-weight: 900;
   font-style: normal;
   font-display: swap;
   size-adjust: 114.7%;
@@ -756,8 +796,8 @@ html:has([data-full-page-scroll-active]) main {
   margin-top: 8px;
 }
 
-/* Intro ↔ awards: 24px (pb-4+pt-2) + 12px */
-#about-awards {
+/* Khối trước ↔ awards: 24px (pb-4+pt-2) + 12px */
+[data-about-awards]:not(:first-child) {
   margin-top: 12px;
 }
 
@@ -882,7 +922,13 @@ html:has([data-full-page-scroll-active]) main {
   p,
 [data-brand-break][data-brand-break-logo="rest"][data-morph-pin-phase="flow"]
   [data-text-focus-in]
-  li {
+  li,
+[data-brand-break][data-brand-break-logo="rest"][data-morph-pin-phase="pin"]
+  [data-text-focus-in]
+  h3,
+[data-brand-break][data-brand-break-logo="rest"][data-morph-pin-phase="flow"]
+  [data-text-focus-in]
+  h3 {
   opacity: 1;
   filter: none;
 }
@@ -909,28 +955,59 @@ html:has([data-full-page-scroll-active]) main {
     opacity: 0;
   }
   100% {
-    filter: blur(0);
+    /* none (not blur(0)): fill-mode both keeps the last frame; a lingering filter
+       makes WebKit rasterize the text → soft/blurry on iOS. */
+    filter: none;
     opacity: 1;
   }
 }
 
 [data-content-partner] [data-text-focus-in] p,
-[data-content-partner] [data-text-focus-in] li {
+[data-content-partner] [data-text-focus-in] li,
+[data-content-partner] [data-text-focus-in] h3 {
   filter: blur(12px);
   opacity: 0;
 }
 
 [data-content-partner-animate="in"] [data-text-focus-in] p,
-[data-content-partner-animate="in"] [data-text-focus-in] li {
+[data-content-partner-animate="in"] [data-text-focus-in] li,
+[data-content-partner-animate="in"] [data-text-focus-in] h3 {
   animation: text-focus-in 1s var(--ease-in-quad) both;
   animation-delay: var(--fps-transition-ms, 400ms);
+}
+
+@keyframes text-fade-in {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* Phone/tablet: iOS WebKit renders filtered text inside composited layers soft
+   (or sticks mid-blur) → about Journey/Partners look blurred. Fade opacity only. */
+@media (pointer: coarse), (max-width: 1023px) {
+  [data-content-partner] [data-text-focus-in] p,
+  [data-content-partner] [data-text-focus-in] li,
+  [data-content-partner] [data-text-focus-in] h3 {
+    filter: none;
+  }
+
+  [data-content-partner-animate="in"] [data-text-focus-in] p,
+  [data-content-partner-animate="in"] [data-text-focus-in] li,
+  [data-content-partner-animate="in"] [data-text-focus-in] h3 {
+    animation-name: text-fade-in;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   [data-content-partner] [data-text-focus-in] p,
   [data-content-partner] [data-text-focus-in] li,
+  [data-content-partner] [data-text-focus-in] h3,
   [data-content-partner-animate="in"] [data-text-focus-in] p,
-  [data-content-partner-animate="in"] [data-text-focus-in] li {
+  [data-content-partner-animate="in"] [data-text-focus-in] li,
+  [data-content-partner-animate="in"] [data-text-focus-in] h3 {
     animation: none;
     filter: none;
     opacity: 1;
@@ -1459,6 +1536,8 @@ html:has([data-full-page-scroll-active]) main {
 [data-morph-pin-phase="flow"] [data-morph-pin-content] {
   transform: none;
   margin-top: min(0px, var(--morph-pin-content-shift, 0px));
+  /* Static in flow — drop the compositor layer (iOS blurs text inside it). */
+  will-change: auto;
 }
 
 
@@ -1851,7 +1930,7 @@ html:has(#hero-carousel) body {
 
 .mobile-menu-links a {
   display: inline-block;
-  font-size: var(--site-label-font-size);
+  font-size: var(--mobile-menu-font-size);
   font-weight: var(--site-label-font-weight);
   letter-spacing: var(--tracking-label-wide);
   text-transform: uppercase;
@@ -3893,5 +3972,16 @@ html:not([data-intro-done]):has([data-site-loading-intro])
   .service-design2__panel,
   .service-design2__panel[data-active] {
     transition: none;
+  }
+}
+
+/* Phone/tablet: căn đều hai bên cho đoạn văn nội dung (nhóm Mô tả nội dung) —
+   cột hẹp làm lề phải lồi lõm. Tiếng Việt nhiều âm tiết ngắn (8–10 dấu cách/
+   dòng) nên khoảng giãn chỉ ~2–3px, không hở. Dòng cuối vẫn căn trái.
+   Bỏ qua danh sách giải (li 1–2 dòng → căn đều dễ thưa) và phần tử inline. */
+@media (max-width: 1023px) {
+  .ts-body:not(li):not(span):not(a) {
+    text-align: justify;
+    text-justify: inter-word;
   }
 }

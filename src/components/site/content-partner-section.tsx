@@ -1,16 +1,19 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { AwardsList } from "@/components/site/awards-list";
 import { ContentSection } from "@/components/site/content-section";
 import { PartnersRow } from "@/components/site/partners-row";
 import { SiteFooter } from "@/components/site/site-footer";
 import type { BrandBreakLogoPhase } from "@/hooks/use-brand-break-scroll";
-import type { ContactPageContent } from "@/lib/validations/site-page";
+import type {
+  AboutContentBlock,
+  ContactPageContent,
+} from "@/lib/validations/site-page";
 import { cn } from "@/lib/utils";
 
 interface ContentPartnerSectionProps {
-  journeyTitle: string;
-  journeyParagraphs: readonly string[];
+  blocks: readonly AboutContentBlock[];
   partnersTitle: string;
   partners: readonly { name: string; logo: string; href?: string }[];
   className?: string;
@@ -103,8 +106,7 @@ function useContentPartnerReveal(logoPhase?: BrandBreakLogoPhase) {
 }
 
 export function ContentPartnerSection({
-  journeyTitle,
-  journeyParagraphs,
+  blocks,
   partnersTitle,
   partners,
   className,
@@ -125,15 +127,31 @@ export function ContentPartnerSection({
       className={cn("relative w-full bg-background", className)}
     >
       <div className="mx-auto flex w-full max-w-4xl flex-col justify-start px-[var(--site-header-pad-inline)] pt-6 pb-0 md:pt-8 md:pb-0">
-        <ContentSection
-          title={journeyTitle}
-          paragraphs={journeyParagraphs}
-          className="mx-auto w-full max-w-3xl py-4 md:py-6"
-          headingEffect="ml2"
-          bodyEffect="text-focus-in"
-          movingLettersSectionId={lettersSectionId}
-          forceLettersPlay={visible}
-        />
+        {blocks.map((block, index) =>
+          block.type === "awards" ? (
+            <AwardsList
+              key={index}
+              title={block.title}
+              groups={block.groups}
+              className="mx-auto w-full max-w-3xl py-4 md:py-6"
+              headingEffect="ml2"
+              bodyEffect="text-focus-in"
+              movingLettersSectionId={lettersSectionId}
+              forceLettersPlay={visible}
+            />
+          ) : (
+            <ContentSection
+              key={index}
+              title={block.title}
+              paragraphs={block.paragraphs}
+              className="mx-auto w-full max-w-3xl py-4 md:py-6"
+              headingEffect="ml2"
+              bodyEffect="text-focus-in"
+              movingLettersSectionId={lettersSectionId}
+              forceLettersPlay={visible}
+            />
+          ),
+        )}
         <PartnersRow
           title={partnersTitle}
           partners={partners}
