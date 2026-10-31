@@ -88,3 +88,64 @@ export function resolveSocialLinks(contact?: {
   }
   return links;
 }
+
+/** Đường dẫn của facebook.com không phải tên Page (không đổi được sang m.me). */
+const FACEBOOK_RESERVED_PATHS = new Set([
+  "groups",
+  "events",
+  "watch",
+  "share",
+  "sharer",
+  "sharer.php",
+  "photo",
+  "photo.php",
+  "story.php",
+  "permalink.php",
+  "login",
+  "home.php",
+  "people",
+  "hashtag",
+]);
+
+/**
+ * Link Fanpage → link nhắn tin Messenger `https://m.me/<page>`.
+ * m.me là universal link (iOS) / app link (Android): điện thoại có Messenger
+ * thì mở thẳng app, không có thì mở bản web; máy tính → messenger.com.
+ * Bỏ query (vd. `?locale=vi_VN`). Hỗ trợ `facebook.com/<tên>`,
+ * `profile.php?id=<số>`, `pages/<tên>/<số>`, link `m.me/...` sẵn có.
+ * Không nhận ra tên Page → null.
+ */
+export function toMessengerHref(
+  facebookHref: string | null | undefined,
+): string | null {
+  const value = facebookHref?.trim();
+  if (!value) return null;
+  let url: URL;
+  try {
+    url = new URL(/^https?:\/\//i.test(value) ? value : `https://${value}`);
+  } catch {
+    return null;
+  }
+  const hostname = url.hostname.toLowerCase();
+  const segments = url.pathname.split("/").filter(Boolean);
+  const toMe = (handle: string) => `https://m.me/${encodeURIComponent(handle)}`;
+
+  if (hostname === "m.me" || hostname === "www.m.me") {
+    return segments[0] ? toMe(segments[0]) : null;
+  }
+  const host = hostname.replace(/^(www|m|web|mbasic)\./, "");
+  if (host !== "facebook.com" && host !== "fb.com") return null;
+
+  const first = segments[0];
+  if (!first) return null;
+  if (first === "profile.php") {
+    const id = url.searchParams.get("id");
+    return id && /^\d+$/.test(id) ? toMe(id) : null;
+  }
+  if (first === "pages") {
+    const id = segments.at(-1);
+    return id && /^\d+$/.test(id) ? toMe(id) : null;
+  }
+  if (FACEBOOK_RESERVED_PATHS.has(first.toLowerCase())) return null;
+  return /^[\w.-]+$/.test(first) ? toMe(first) : null;
+}

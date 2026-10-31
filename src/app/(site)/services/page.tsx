@@ -2,7 +2,7 @@ import { MediaPlaceholdersProvider } from "@/components/site/media-placeholders"
 import { getMediaPlaceholders } from "@/lib/media-dimensions";
 import { ServiceDesign1Page } from "@/components/site/service-design1-page";
 import { ServiceDesign2Page } from "@/components/site/service-design2-page";
-import { ServicesPageScroll } from "@/components/site/services-page-scroll";
+import { ServicesCardsPage } from "@/components/site/services-cards-page";
 import { getSiteContact } from "@/lib/get-site-contact";
 import { getSiteServicesPage } from "@/lib/get-site-services";
 import { createPageMetadata } from "@/lib/site-metadata";
@@ -24,7 +24,7 @@ export const revalidate = 3600;
 
 /** Layout admin chọn (Trang › Dịch vụ) → component hiển thị tương ứng. */
 const SERVICES_LAYOUT_COMPONENTS = {
-  service: ServicesPageScroll,
+  service: ServicesCardsPage,
   service1: ServiceDesign1Page,
   service2: ServiceDesign2Page,
 } as const;

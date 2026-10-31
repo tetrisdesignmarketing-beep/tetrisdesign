@@ -27,6 +27,8 @@ import { Button } from "@/components/ui/button";
  * - Vuốt ảnh xuống: ảnh nhỏ dần theo ngón tay, nền mờ dần; thả đủ xa/nhanh thì
  *   đóng (bay về ô), chưa đủ thì bật về chỗ cũ.
  * Không tìm được ô (canvas, ô nằm ngoài màn hình) → phóng nhẹ + mờ dần tại chỗ.
+ * Màn cảm ứng: chụm 2 ngón / chạm đúp để phóng to, 1 ngón kéo khi đang phóng
+ * (lớp __zoom riêng trong khung → không đụng hiệu ứng bay của khung).
  */
 
 const OPEN_MS = 420;
@@ -87,6 +89,35 @@ interface DragState {
   lastT: number;
   vy: number;
 }
+
+/* Phóng to trên màn cảm ứng. */
+const ZOOM_MAX = 4;
+const ZOOM_DOUBLE_TAP = 2.5;
+/** Dưới mức này coi như 1× (thả tay → về cỡ gốc, bật lại vuốt đổi ảnh / đóng). */
+const ZOOM_EPSILON = 1.02;
+const ZOOM_SETTLE_MS = 260;
+const DOUBLE_TAP_MS = 300;
+const DOUBLE_TAP_SLOP_PX = 30;
+const TAP_MOVE_PX = 10;
+/** Kéo quá mép khi đang phóng → lực cản (chỉ đi 35% quãng vượt). */
+const ZOOM_RUBBER = 0.35;
+
+interface ZoomState {
+  s: number;
+  x: number;
+  y: number;
+}
+
+type ZoomGesture =
+  | {
+      kind: "pinch";
+      s0: number;
+      x0: number;
+      y0: number;
+      mid0: { x: number; y: number };
+      dist0: number;
+    }
+  | { kind: "pan"; id: number; px: number; py: number; x0: number; y0: number };
 
 const REST_TRANSFORM = "translate3d(0px, 0px, 0px) scale(1)";
 const REST_CLIP = "inset(0px 0px 0px 0px)";
@@ -251,6 +282,109 @@ export function ProjectDetailLightbox({
     };
   });
 
+  /* ---------- Phóng to (chỉ cảm ứng) ---------- */
+  const zoomLayerRef = useRef<HTMLDivElement>(null);
+  const zoomRef = useRef<ZoomState>({ s: 1, x: 0, y: 0 });
+  const zoomGestureRef = useRef<ZoomGesture | null>(null);
+  const pointersRef = useRef(new Map<number, { x: number; y: number }>());
+  const lastTapRef = useRef<{ t: number; x: number; y: number } | null>(null);
+  /** Có 2 ngón / đang kéo khi phóng → ngón còn lại không được tính là vuốt đổi ảnh. */
+  const zoomTouchedRef = useRef(false);
+
+  const isZoomed = () => zoomRef.current.s > ZOOM_EPSILON;
+
+  /**
+   * Giới hạn dịch chuyển: ảnh phóng nhỏ hơn màn hình theo 1 chiều → căn giữa
+   * màn hình theo chiều đó; lớn hơn → không cho lộ khoảng đen ở mép.
+   * `rubber` = cho vượt mép có lực cản (đang kéo), không thì chặn cứng.
+   */
+  const clampZoom = useCallback((z: ZoomState, rubber: boolean): ZoomState => {
+    const box = latestRef.current.frame;
+    const view = readViewport();
+    /* Chặn cứng (thả tay) → không vượt mức phóng tối đa. */
+    const scale = rubber ? z.s : Math.min(z.s, ZOOM_MAX);
+    const axis = (t: number, origin: number, size: number, viewSize: number) => {
+      const scaled = size * scale;
+      if (scaled <= viewSize) return (viewSize - scaled) / 2 - origin;
+      const max = -origin;
+      const min = viewSize - origin - scaled;
+      if (t > max) return rubber ? max + (t - max) * ZOOM_RUBBER : max;
+      if (t < min) return rubber ? min + (t - min) * ZOOM_RUBBER : min;
+      return t;
+    };
+    if (scale <= 1) return { s: 1, x: 0, y: 0 };
+    return {
+      s: scale,
+      x: axis(z.x, box.x, box.w, view.w),
+      y: axis(z.y, box.y, box.h, view.h),
+    };
+  }, []);
+
+  const applyZoom = useCallback((z: ZoomState, animate: boolean) => {
+    zoomRef.current = z;
+    const layer = zoomLayerRef.current;
+    const frameEl = frameRef.current;
+    if (!layer || !frameEl) return;
+    layer.style.transition = animate
+      ? `transform ${ZOOM_SETTLE_MS}ms ${iosEase()}`
+      : "";
+    layer.style.transform =
+      z.s === 1 && z.x === 0 && z.y === 0
+        ? ""
+        : `translate3d(${z.x}px, ${z.y}px, 0px) scale(${z.s})`;
+    /* Đang phóng: khung bỏ cắt mép để ảnh to ra hết màn hình. */
+    if (z.s > 1) {
+      frameEl.setAttribute("data-zoomed", "");
+      frameEl.style.clipPath = "none";
+    } else {
+      frameEl.removeAttribute("data-zoomed");
+      if (frameEl.style.clipPath === "none") frameEl.style.clipPath = "";
+    }
+  }, []);
+
+  const resetZoom = useCallback(
+    (animate: boolean) => {
+      zoomGestureRef.current = null;
+      if (zoomRef.current.s === 1 && !zoomLayerRef.current?.style.transform) {
+        return;
+      }
+      applyZoom({ s: 1, x: 0, y: 0 }, animate);
+    },
+    [applyZoom],
+  );
+
+  /** Thả tay: dưới ngưỡng → về 1×; còn lại chặn trong mép (có hiệu ứng). */
+  const settleZoom = useCallback(() => {
+    const z = zoomRef.current;
+    if (z.s <= ZOOM_EPSILON) resetZoom(true);
+    else applyZoom(clampZoom(z, false), true);
+  }, [applyZoom, clampZoom, resetZoom]);
+
+  /** Phóng tới `scale` sao cho điểm màn hình (cx, cy) đứng yên dưới ngón tay. */
+  const zoomAt = useCallback(
+    (scale: number, cx: number, cy: number) => {
+      const box = latestRef.current.frame;
+      const z = zoomRef.current;
+      const px = (cx - box.x - z.x) / z.s;
+      const py = (cy - box.y - z.y) / z.s;
+      applyZoom(
+        clampZoom(
+          { s: scale, x: cx - box.x - scale * px, y: cy - box.y - scale * py },
+          false,
+        ),
+        true,
+      );
+    },
+    [applyZoom, clampZoom],
+  );
+
+  /* Đổi ảnh / đóng / mở lại → luôn về 1×. */
+  useEffect(() => {
+    resetZoom(false);
+    pointersRef.current.clear();
+    lastTapRef.current = null;
+  }, [current, phase, openToken, resetZoom]);
+
   const hideOrigin = useCallback((el: HTMLElement | null) => {
     const prev = hiddenOriginRef.current;
     if (prev && prev !== el) prev.style.visibility = "";
@@ -353,6 +487,8 @@ export function ProjectDetailLightbox({
   const requestClose = useCallback(() => {
     const latest = latestRef.current;
     if (latest.phase !== "open") return;
+    /* Đang phóng → về 1× ngay để ảnh bay về ô đúng khung. */
+    resetZoom(false);
     /* Đang mở dở / đang bật về → dừng tại chỗ rồi bay về từ đúng vị trí đó. */
     if (busyRef.current) interruptRunning();
     const root = rootRef.current;
@@ -450,7 +586,7 @@ export function ProjectDetailLightbox({
       fill: "forwards",
     });
     flight.finished.then(finish, finish);
-  }, [hideOrigin, interruptRunning]);
+  }, [hideOrigin, interruptRunning, resetZoom]);
 
   /* ---------- Vuốt xuống chưa đủ → bật về ---------- */
   const springBack = useCallback(() => {
@@ -598,9 +734,65 @@ export function ProjectDetailLightbox({
     chrome.style.opacity = String(Math.max(0, 1 - progress * 4));
   };
 
+  const capturePointer = (event: ReactPointerEvent<HTMLDivElement>) => {
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    } catch {
+      /* pointer đã kết thúc */
+    }
+  };
+
+  const startPan = (id: number, x: number, y: number) => {
+    const z = zoomRef.current;
+    zoomGestureRef.current = { kind: "pan", id, px: x, py: y, x0: z.x, y0: z.y };
+  };
+
   const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (busyRef.current || latestRef.current.phase !== "open") return;
     if (event.pointerType === "mouse" && event.button !== 0) return;
+    if (event.pointerType !== "mouse") {
+      const pointers = pointersRef.current;
+      pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      if (pointers.size === 2) {
+        /* Ngón thứ 2 → chụm phóng; huỷ vuốt đóng / đổi ảnh đang dở. */
+        const drag = dragRef.current;
+        dragRef.current = null;
+        if (drag?.axis === "y") springBack();
+        const [a, b] = [...pointers.values()];
+        const z = zoomRef.current;
+        zoomGestureRef.current = {
+          kind: "pinch",
+          s0: z.s,
+          x0: z.x,
+          y0: z.y,
+          mid0: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 },
+          dist0: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)),
+        };
+        zoomTouchedRef.current = true;
+        capturePointer(event);
+        return;
+      }
+      if (pointers.size > 2) return;
+      zoomTouchedRef.current = false;
+      if (isZoomed()) {
+        startPan(event.pointerId, event.clientX, event.clientY);
+        zoomTouchedRef.current = true;
+        capturePointer(event);
+        /* Vẫn ghi lại điểm chạm để nhận chạm đúp (thu nhỏ). */
+        dragRef.current = {
+          id: event.pointerId,
+          x0: event.clientX,
+          y0: event.clientY,
+          axis: "none",
+          dx: 0,
+          dy: 0,
+          lastY: event.clientY,
+          lastT: event.timeStamp,
+          vy: 0,
+        };
+        return;
+      }
+    }
     dragRef.current = {
       id: event.pointerId,
       x0: event.clientX,
@@ -615,6 +807,51 @@ export function ProjectDetailLightbox({
   };
 
   const onPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const pointers = pointersRef.current;
+    if (pointers.has(event.pointerId)) {
+      pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    }
+    const gesture = zoomGestureRef.current;
+    if (gesture?.kind === "pinch" && pointers.size >= 2) {
+      const [a, b] = [...pointers.values()];
+      const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+      const dist = Math.max(1, Math.hypot(a.x - b.x, a.y - b.y));
+      const box = latestRef.current.frame;
+      /* Cho thu dưới 1× / vượt tối đa một chút (có cản), thả tay sẽ bật về. */
+      let s = gesture.s0 * (dist / gesture.dist0);
+      if (s < 1) s = 1 - (1 - s) * ZOOM_RUBBER;
+      if (s > ZOOM_MAX) s = ZOOM_MAX + (s - ZOOM_MAX) * ZOOM_RUBBER;
+      /* Điểm ảnh dưới tâm 2 ngón lúc bắt đầu luôn đi theo tâm 2 ngón. */
+      const px = (gesture.mid0.x - box.x - gesture.x0) / gesture.s0;
+      const py = (gesture.mid0.y - box.y - gesture.y0) / gesture.s0;
+      applyZoom(
+        clampZoom(
+          { s, x: mid.x - box.x - s * px, y: mid.y - box.y - s * py },
+          true,
+        ),
+        false,
+      );
+      return;
+    }
+    if (gesture?.kind === "pan" && gesture.id === event.pointerId) {
+      const drag = dragRef.current;
+      if (drag && drag.id === event.pointerId) {
+        drag.dx = event.clientX - drag.x0;
+        drag.dy = event.clientY - drag.y0;
+      }
+      applyZoom(
+        clampZoom(
+          {
+            s: zoomRef.current.s,
+            x: gesture.x0 + event.clientX - gesture.px,
+            y: gesture.y0 + event.clientY - gesture.py,
+          },
+          true,
+        ),
+        false,
+      );
+      return;
+    }
     const drag = dragRef.current;
     if (!drag || drag.id !== event.pointerId) return;
     drag.dx = event.clientX - drag.x0;
@@ -649,7 +886,70 @@ export function ProjectDetailLightbox({
     if (drag.axis === "y") applyDrag(drag.dx, drag.dy);
   };
 
+  /** Thả 1 ngón trong lúc phóng / chụm. Trả về true nếu đã xử lý xong. */
+  const releaseZoomPointer = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const pointers = pointersRef.current;
+    pointers.delete(event.pointerId);
+    const gesture = zoomGestureRef.current;
+    if (gesture?.kind === "pinch") {
+      if (pointers.size === 1) {
+        /* Còn 1 ngón: đang phóng thì chuyển sang kéo, không thì chờ thả. */
+        const [[id, point]] = [...pointers.entries()];
+        if (zoomRef.current.s > ZOOM_EPSILON) {
+          applyZoom(clampZoom(zoomRef.current, false), true);
+          startPan(id, point.x, point.y);
+        } else {
+          zoomGestureRef.current = null;
+          settleZoom();
+        }
+      } else if (pointers.size === 0) {
+        zoomGestureRef.current = null;
+        settleZoom();
+      }
+      return true;
+    }
+    if (gesture?.kind === "pan" && gesture.id === event.pointerId) {
+      zoomGestureRef.current = null;
+      settleZoom();
+      return false; /* vẫn cho kiểm tra chạm đúp bên dưới */
+    }
+    return pointers.size > 0 || zoomTouchedRef.current;
+  };
+
+  /** Chạm đúp (cảm ứng): đang 1× → phóng 2.5× tại điểm chạm; đang phóng → về 1×. */
+  const handleTap = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const now = event.timeStamp;
+    const last = lastTapRef.current;
+    if (
+      last &&
+      now - last.t < DOUBLE_TAP_MS &&
+      Math.hypot(event.clientX - last.x, event.clientY - last.y) <
+        DOUBLE_TAP_SLOP_PX
+    ) {
+      lastTapRef.current = null;
+      if (isZoomed()) resetZoom(true);
+      else zoomAt(ZOOM_DOUBLE_TAP, event.clientX, event.clientY);
+      return;
+    }
+    lastTapRef.current = { t: now, x: event.clientX, y: event.clientY };
+  };
+
   const onPointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.pointerType !== "mouse") {
+      const drag = dragRef.current;
+      const handled = releaseZoomPointer(event);
+      const isTap =
+        drag !== null &&
+        drag.id === event.pointerId &&
+        Math.abs(event.clientX - drag.x0) < TAP_MOVE_PX &&
+        Math.abs(event.clientY - drag.y0) < TAP_MOVE_PX;
+      if (isTap && pointersRef.current.size === 0) handleTap(event);
+      if (handled || isZoomed() || zoomTouchedRef.current) {
+        if (drag?.id === event.pointerId) dragRef.current = null;
+        if (pointersRef.current.size === 0) zoomTouchedRef.current = false;
+        return;
+      }
+    }
     const drag = dragRef.current;
     if (!drag || drag.id !== event.pointerId) return;
     dragRef.current = null;
@@ -668,6 +968,14 @@ export function ProjectDetailLightbox({
   };
 
   const onPointerCancel = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.pointerType !== "mouse") {
+      pointersRef.current.delete(event.pointerId);
+      if (zoomGestureRef.current && pointersRef.current.size === 0) {
+        zoomGestureRef.current = null;
+        zoomTouchedRef.current = false;
+        settleZoom();
+      }
+    }
     const drag = dragRef.current;
     if (!drag || drag.id !== event.pointerId) return;
     dragRef.current = null;
@@ -712,18 +1020,20 @@ export function ProjectDetailLightbox({
             height: frame.h,
           }}
         >
-          <ProgressiveImage
-            key={`${src}-${current}`}
-            src={src}
-            alt={`${title} — ${current + 1}`}
-            previewWidth={CANVAS_PREVIEW_WIDTH}
-            fullWidth={CANVAS_FULL_WIDTH}
-            sizes="100vw"
-            priority
-            /* Khung đã đúng tỷ lệ ảnh → cover = contain; chưa biết tỷ lệ thì
-               khung phủ màn hình và ảnh contain. */
-            className={ratio ? "object-cover" : "object-contain"}
-          />
+          <div ref={zoomLayerRef} className="project-detail-lightbox__zoom">
+            <ProgressiveImage
+              key={`${src}-${current}`}
+              src={src}
+              alt={`${title} — ${current + 1}`}
+              previewWidth={CANVAS_PREVIEW_WIDTH}
+              fullWidth={CANVAS_FULL_WIDTH}
+              sizes="100vw"
+              priority
+              /* Khung đã đúng tỷ lệ ảnh → cover = contain; chưa biết tỷ lệ thì
+                 khung phủ màn hình và ảnh contain. */
+              className={ratio ? "object-cover" : "object-contain"}
+            />
+          </div>
         </div>
       </div>
 

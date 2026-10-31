@@ -262,12 +262,16 @@ export const siteServiceSchema = z.object({
   title: z.string().min(1).max(200),
   /** Nhãn phụ (vd. tiếng Anh "BRAND IDENTITY") — hiện trên mô tả; không bắt buộc. */
   label: z.string().trim().max(120).optional(),
+  /** Layout thẻ: dòng nhóm phía trên tiêu đề (vd. "Thiết kế", "Thi công"). */
+  group: z.string().trim().max(120).optional(),
+  /** Layout thẻ: tên ngắn ở hero (vd. "Thương hiệu"); trống → dùng tiêu đề. */
+  shortTitle: z.string().trim().max(120).optional(),
   description: z.string().min(1),
   image: mediaPathSchema,
   imageAlt: z.string().min(1).max(200),
 });
 
-/** Layout trang /services admin chọn: service = mặc định, service1 = xấp ảnh, service2 = cột co giãn. */
+/** Layout trang /services admin chọn: service = mặc định (thẻ dịch vụ), service1 = xấp ảnh, service2 = cột co giãn. */
 export const SERVICES_LAYOUTS = ["service", "service1", "service2"] as const;
 export type ServicesLayout = (typeof SERVICES_LAYOUTS)[number];
 export const DEFAULT_SERVICES_LAYOUT: ServicesLayout = "service";
@@ -475,6 +479,8 @@ export type ServicesPageFormValues = {
   items: Array<{
     title: string;
     label?: string;
+    group?: string;
+    shortTitle?: string;
     description: string;
     image: string;
     imageAlt: string;

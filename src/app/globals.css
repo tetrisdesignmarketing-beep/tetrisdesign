@@ -2837,6 +2837,19 @@ ul:has(.project-card-hover-scale) {
   backface-visibility: hidden;
 }
 
+/* Lớp phóng to (chụm 2 ngón / chạm đúp trên màn cảm ứng) — transform do JS
+   ghi; gốc toạ độ góc trên trái để tính điểm phóng theo ngón tay. */
+.project-detail-lightbox__zoom {
+  position: absolute;
+  inset: 0;
+  transform-origin: 0 0;
+}
+
+/* Đang phóng: ảnh được tràn khỏi khung, ra hết màn hình. */
+.project-detail-lightbox__frame[data-zoomed] {
+  overflow: visible;
+}
+
 /* Nút đóng / mũi tên / số đếm — hiện sau ảnh khi mở, ẩn trước khi đóng */
 .project-detail-lightbox__chrome {
   position: absolute;
@@ -3983,5 +3996,407 @@ html:not([data-intro-done]):has([data-site-loading-intro])
   .ts-body:not(li):not(span):not(a) {
     text-align: justify;
     text-justify: inter-word;
+  }
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+   /services — layout mặc định "service" (thẻ dịch vụ, theo Dịch vụ.pdf 1440).
+   Cỡ chữ = cỡ trong thiết kế ÷ 1.147 (size-adjust của Darker Grotesque).
+   Hiệu ứng: hero chạy 1 lần khi vào trang; phần còn lại hiện dần khi vào màn
+   hình (IntersectionObserver gắn data-svc-in, chỉ transform/opacity → mượt).
+   ─────────────────────────────────────────────────────────────────────────── */
+.svc-page {
+  --svc-gutter: clamp(16px, 2.22vw, 32px);
+  --svc-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  overflow-x: clip;
+  background: var(--background);
+}
+
+/* Hero: tên các lĩnh vực, đậm → nhạt dần (#525252 → #dedede). */
+.svc-hero {
+  padding: clamp(40px, 5.6vw, 80px) clamp(16px, 3.33vw, 48px) 0;
+}
+
+.svc-hero__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.svc-hero__line {
+  display: inline-block;
+  font-size: clamp(32px, 4.1vw, 59px);
+  font-weight: 700;
+  line-height: 1.57;
+  letter-spacing: -0.04em;
+  color: color-mix(in srgb, #525252, #dedede var(--svc-hero-mix, 0%));
+  text-decoration: none;
+  transition: color 0.35s ease;
+}
+
+.svc-hero__line:hover,
+.svc-hero__line:focus-visible {
+  color: var(--foreground);
+}
+
+.svc-hero__line:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 4px;
+}
+
+@keyframes svc-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 0.45em, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .svc-hero__item {
+    animation: svc-rise 0.9s var(--svc-ease) both;
+    animation-delay: calc(var(--svc-hero-i, 0) * 120ms + 120ms);
+  }
+
+  /* Đang có màn intro (lần đầu vào site) → chờ intro xong mới chạy. */
+  html:not([data-intro-done]) .svc-hero__item {
+    animation-play-state: paused;
+  }
+}
+
+/* "We turn ideas into spaces" + "Our Service" tràn bề ngang. */
+.svc-intro {
+  container-type: inline-size;
+  margin-top: clamp(56px, 7.57vw, 109px);
+}
+
+.svc-intro__tagline {
+  position: relative;
+  height: 1.3em;
+  margin: 0;
+  font-size: clamp(11px, 0.9vw, 13px);
+  font-weight: 400;
+  line-height: 1.3;
+  color: var(--foreground);
+}
+
+.svc-intro__word {
+  position: absolute;
+  top: 0;
+  left: var(--svc-word-left);
+  white-space: nowrap;
+}
+
+.svc-intro__word[data-last] {
+  left: auto;
+  right: 2.85%;
+}
+
+.svc-intro__title {
+  /* Kéo sát hàng tagline như thiết kế (line-height chừa khoảng trên chữ). */
+  margin: -0.048em 0 0;
+  font-size: 20.3cqi;
+  font-weight: 700;
+  line-height: 0.82;
+  letter-spacing: -0.0425em;
+  text-align: center;
+  white-space: nowrap;
+  color: #000;
+}
+
+.svc-intro__title-text {
+  display: inline-block;
+}
+
+/* Thẻ dịch vụ. */
+.svc-cards {
+  display: grid;
+  gap: 18px;
+  margin-top: clamp(40px, 5.35vw, 77px);
+  padding-inline: var(--svc-gutter);
+}
+
+.svc-card {
+  scroll-margin-top: calc(var(--site-header-total-height) + 16px);
+  background: #000;
+  color: #fff;
+}
+
+.svc-card[data-tone="red"] {
+  background: #6f1114;
+}
+
+.svc-card[data-tone="light"] {
+  background: #dfdfdf;
+  color: #000;
+}
+
+.svc-card__content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(220px, 27.2%, 460px);
+  grid-template-rows: auto 1fr auto;
+  grid-template-areas:
+    "num media"
+    "body media"
+    "cta media";
+  column-gap: clamp(32px, 6vw, 120px);
+  padding: clamp(32px, 3.33vw, 48px) clamp(32px, 3.47vw, 50px)
+    clamp(32px, 3.33vw, 48px) clamp(24px, 2.64vw, 38px);
+}
+
+.svc-card__num {
+  grid-area: num;
+  margin: -8px 0 0;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0.02em;
+}
+
+.svc-card__media {
+  grid-area: media;
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 350 / 435;
+  background: var(--site-image-placeholder-dark);
+}
+
+.svc-card[data-tone="light"] .svc-card__media {
+  background: var(--site-image-placeholder);
+}
+
+.svc-card__media img {
+  transition: transform 1.2s var(--svc-ease);
+}
+
+.svc-card__body {
+  grid-area: body;
+  align-self: center;
+  max-width: 440px;
+  /* Lệch xuống nhẹ như thiết kế (khối chữ không nằm đúng tâm thẻ). */
+  padding-block: 52px 24px;
+}
+
+.svc-card__title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.23;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+}
+
+.svc-card__title > span {
+  display: block;
+}
+
+.svc-card__desc {
+  margin: 18px 0 0;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.62;
+}
+
+.svc-card__cta {
+  grid-area: cta;
+  justify-self: start;
+  position: relative;
+  padding-bottom: 13px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Gạch chân 2px: hover thì chạy lại từ trái sang. */
+.svc-card__cta::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: currentColor;
+  transform-origin: left center;
+}
+
+.svc-card__cta:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 6px;
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .svc-card__cta:hover::after {
+    animation: svc-underline 0.6s var(--svc-ease);
+  }
+
+  .svc-card:hover .svc-card__media img {
+    transform: scale(1.03);
+  }
+}
+
+@keyframes svc-underline {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* Khối liên hệ cuối trang. */
+.svc-contact {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(280px, 31.6vw, 455px);
+  align-items: center;
+  gap: 32px;
+  margin-top: clamp(40px, 3.8vw, 55px);
+  padding: 46px clamp(16px, 3.2vw, 46px) 46px clamp(16px, 2.7vw, 39px);
+  border-block: 1px solid #000;
+}
+
+.svc-contact__heading {
+  margin: 0;
+  font-size: 21.6px;
+  font-weight: 700;
+  line-height: 1.17;
+}
+
+.svc-contact__links {
+  display: grid;
+  gap: 18px;
+}
+
+.svc-contact__link {
+  display: block;
+  padding-bottom: 17px;
+  border-bottom: 1px solid #000;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.2;
+  color: var(--foreground);
+  text-decoration: none;
+  transition: color 0.25s ease;
+}
+
+.svc-contact__link:hover {
+  color: var(--brand-red);
+}
+
+/* Footer cách khối liên hệ như thiết kế (icon cách đường kẻ ~78px). */
+.svc-footer {
+  margin-top: clamp(24px, 4.4vw, 63px);
+}
+
+/* Hiện dần khi vào màn hình — chỉ ẩn trước khi có JS (scripting) và khi người
+   dùng không tắt chuyển động. */
+@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+  [data-svc-reveal] {
+    transition:
+      opacity 0.8s ease,
+      transform 0.9s var(--svc-ease);
+  }
+
+  [data-svc-reveal]:not([data-svc-in]) {
+    opacity: 0;
+    transform: translate3d(0, 32px, 0);
+  }
+
+  .svc-card:not([data-svc-in]) .svc-card__media img {
+    transform: scale(1.08);
+  }
+}
+
+/* Tablet: thẻ vẫn 2 cột, ảnh rộng hơn chút. */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .svc-card__content {
+    grid-template-columns: minmax(0, 1fr) 36%;
+    column-gap: 32px;
+  }
+
+  .svc-card__title,
+  .svc-card__desc {
+    font-size: 14px;
+  }
+}
+
+/* Mobile: thẻ xếp dọc — số → ảnh → tiêu đề + mô tả → nút. */
+@media (max-width: 767px) {
+  .svc-hero__line {
+    line-height: 1.3;
+  }
+
+  .svc-hero__item + .svc-hero__item {
+    margin-top: 6px;
+  }
+
+  .svc-intro__tagline {
+    display: flex;
+    justify-content: space-between;
+    height: auto;
+    padding-inline: var(--svc-gutter);
+  }
+
+  .svc-intro__word,
+  .svc-intro__word[data-last] {
+    position: static;
+  }
+
+  .svc-cards {
+    gap: 12px;
+  }
+
+  .svc-card__content {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    grid-template-areas:
+      "num"
+      "media"
+      "body"
+      "cta";
+    row-gap: 20px;
+    padding: 20px 20px 24px;
+  }
+
+  .svc-card__media {
+    max-height: 68svh;
+  }
+
+  .svc-card__body {
+    max-width: none;
+    padding-block: 4px 8px;
+  }
+
+  .svc-card__title {
+    font-size: 15px;
+  }
+
+  .svc-card__desc {
+    font-size: 14px;
+    line-height: 1.65;
+  }
+
+  .svc-card__cta {
+    font-size: 12px;
+  }
+
+  .svc-contact {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 28px;
+    padding: 36px var(--svc-gutter);
+  }
+
+  .svc-contact__heading {
+    font-size: 22px;
+  }
+
+  .svc-contact__link {
+    font-size: 14px;
   }
 }

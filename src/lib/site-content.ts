@@ -124,6 +124,10 @@ export interface SiteService {
   title: string;
   /** Nhãn phụ (tiếng Anh) phía trên mô tả — không bắt buộc. */
   label?: string;
+  /** Layout thẻ: dòng nhóm phía trên tiêu đề (vd. "Thiết kế"). */
+  group?: string;
+  /** Layout thẻ: tên ngắn ở hero (vd. "Thương hiệu"); trống → tiêu đề. */
+  shortTitle?: string;
   description: string;
   image: string;
   imageAlt: string;
@@ -134,24 +138,30 @@ export const siteServices: SiteService[] = [
     /* Hiển thị đúng như gõ (không ép viết hoa) — trang Dịch vụ dạng danh sách lớn. */
     title: "Nhận diện Thương hiệu",
     label: "BRAND IDENTITY",
+    group: "Thiết kế",
+    shortTitle: "Thương hiệu",
     description:
       "Tetris đồng hành cùng khách hàng trong việc định hình ngôn ngữ thị giác và định hướng thương hiệu, từ đó xây dựng một hệ thống nhận diện rõ ràng, nhất quán và mang tính ứng dụng cao trong thực tế.",
     image: "/site/services/service1.png",
     imageAlt: "Thiết kế nhận diện thương hiệu",
   },
   {
-    title: "Thiết kế Kiến trúc & Nội thất",
+    title: "Kiến trúc & Nội thất",
     label: "ARCHITECTURE & INTERIOR",
+    group: "Thiết kế",
+    shortTitle: "Kiến trúc - Nội thất",
     description:
       "Nơi câu chuyện thương hiệu được chuyển hóa thành ngôn ngữ không gian. Mỗi đường nét, vật liệu và bố cục đều được tính toán nhằm kiến tạo một không gian vừa giàu giá trị thẩm mỹ, vừa đáp ứng hành vi người dùng và mục tiêu kinh doanh.",
     image: "/site/services/service2.png",
     imageAlt: "Thiết kế kiến trúc và nội thất",
   },
   {
-    title: "Thi công",
+    title: "Kiến trúc & Nội thất",
     label: "CONSTRUCTION",
+    group: "Thi công",
+    shortTitle: "Thi công",
     description:
-      "Trong suốt quá trình triển khai, Tetris kiểm soát chặt chẽ từng giai đoạn để đảm bảo thiết kế được hiện thực hóa một cách chính xác, nhất quán và hiệu quả.",
+      "Hiện thực hóa thiết kế với quy trình thi công được kiểm soát chặt chẽ, đảm bảo chất lượng, tiến độ và tính đồng nhất với ý tưởng ban đầu.",
     image: "/site/services/service3.png",
     imageAlt: "Thi công",
   },

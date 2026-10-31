@@ -26,7 +26,7 @@ const selectClassName =
   "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
 
 const LAYOUT_OPTIONS: ReadonlyArray<{ value: ServicesLayout; label: string }> = [
-  { value: "service", label: "Mặc định — danh sách tiêu đề + ảnh" },
+  { value: "service", label: "Mặc định — thẻ dịch vụ (hero + Our Service)" },
   { value: "service1", label: "Design 1 — xấp ảnh" },
   { value: "service2", label: "Design 2 — cột ảnh co giãn" },
 ];
@@ -34,6 +34,8 @@ const LAYOUT_OPTIONS: ReadonlyArray<{ value: ServicesLayout; label: string }> = 
 const emptyService = {
   title: "",
   label: "",
+  group: "",
+  shortTitle: "",
   description: "",
   image: "",
   imageAlt: "",
@@ -164,6 +166,39 @@ export function ServicesPageForm({
               Hiển thị đúng như gõ (vd. &quot;Nhận diện Thương hiệu&quot;), không tự viết hoa.
             </p>
             <FieldError message={errors.items?.[index]?.title?.message} />
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor={`service-group-${index}`}>
+                Dòng nhóm (không bắt buộc)
+              </Label>
+              <Input
+                id={`service-group-${index}`}
+                placeholder="VD: Thiết kế / Thi công"
+                {...register(`items.${index}.group`)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Layout mặc định: dòng đầu tiêu đề thẻ (THIẾT KẾ / NHẬN DIỆN…).
+              </p>
+              <FieldError message={errors.items?.[index]?.group?.message} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor={`service-short-${index}`}>
+                Tên ngắn ở hero (không bắt buộc)
+              </Label>
+              <Input
+                id={`service-short-${index}`}
+                placeholder="VD: Thương hiệu"
+                {...register(`items.${index}.shortTitle`)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Layout mặc định: dòng chữ lớn đầu trang; trống → dùng tiêu đề.
+              </p>
+              <FieldError
+                message={errors.items?.[index]?.shortTitle?.message}
+              />
+            </div>
           </div>
 
           <div className="space-y-2">
