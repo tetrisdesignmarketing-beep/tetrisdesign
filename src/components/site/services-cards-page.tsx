@@ -7,6 +7,7 @@ import {
   useEffect,
   useRef,
 } from "react";
+import "./services-cards-page.css";
 import { ProgressiveImage } from "@/components/site/progressive-image";
 import { SiteFooter } from "@/components/site/site-footer";
 import {

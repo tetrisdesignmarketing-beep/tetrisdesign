@@ -1020,7 +1020,13 @@ export function ProjectDetailLightbox({
             height: frame.h,
           }}
         >
-          <div ref={zoomLayerRef} className="project-detail-lightbox__zoom">
+          {/* Vị trí ghi inline (không chỉ CSS): thiếu CSS thì lớp này cao 0 →
+              khi có transform, ảnh absolute co theo và biến mất. */}
+          <div
+            ref={zoomLayerRef}
+            className="project-detail-lightbox__zoom"
+            style={{ position: "absolute", inset: 0, transformOrigin: "0 0" }}
+          >
             <ProgressiveImage
               key={`${src}-${current}`}
               src={src}
