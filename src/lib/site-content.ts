@@ -25,6 +25,7 @@ export const siteNav = [
   { label: "GIỚI THIỆU", href: "/about" },
   { label: "DỰ ÁN", href: "/projects" },
   { label: "DỊCH VỤ", href: "/services" },
+  { label: "TIN TỨC", href: "/tin-tuc" },
   { label: "LIÊN HỆ", href: "/contact" },
 ] as const;
 /** Login admin: không còn ở menu — bấm "© 2026 TETRIS DESIGN" ở footer để vào. */

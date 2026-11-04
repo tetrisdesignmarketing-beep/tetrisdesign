@@ -49,5 +49,6 @@ export function getAdminLayoutPage(slug: string) {
 export const ADMIN_NAV = {
   layout: { href: "/admin/pages", label: "Layout" },
   posts: { href: "/admin/posts", label: "Bài đăng" },
+  news: { href: "/admin/news", label: "Tin tức" },
   categories: { href: "/admin/categories", label: "Category" },
 } as const;

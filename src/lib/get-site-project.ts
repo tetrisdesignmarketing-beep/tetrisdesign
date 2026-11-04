@@ -47,7 +47,8 @@ export async function getRelatedSiteProjects(
   try {
     const rows = await prisma.post.findMany({
       where: { published: true, slug: { not: project.slug } },
-      orderBy: { createdAt: "desc" },
+      // Same order as /projects; the category split below keeps it per group.
+      orderBy: [{ featured: "desc" }, { sortOrder: "asc" }, { createdAt: "desc" }],
       select: postForSiteProjectSelect,
     });
 

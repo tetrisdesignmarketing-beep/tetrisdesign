@@ -239,7 +239,7 @@ export function PostForm({ initialData, categories, mode }: PostFormProps) {
           {...register("featured")}
         />
         <Label htmlFor="featured" className="font-normal">
-          Ưu tiên hiển thị đầu trang chủ
+          Ưu tiên hiển thị đầu danh sách dự án
         </Label>
       </div>
 

@@ -20,6 +20,7 @@ export function AdminNav() {
     pathname === ADMIN_NAV.posts.href ||
     pathname.startsWith(`${ADMIN_NAV.posts.href}/`);
   const categoriesActive = pathname.startsWith(ADMIN_NAV.categories.href);
+  const newsActive = pathname.startsWith(ADMIN_NAV.news.href);
 
   return (
     <nav className="flex items-center gap-3 overflow-x-auto text-sm sm:gap-4">
@@ -35,6 +36,9 @@ export function AdminNav() {
         className={navClass(categoriesActive)}
       >
         {ADMIN_NAV.categories.label}
+      </Link>
+      <Link href={ADMIN_NAV.news.href} className={navClass(newsActive)}>
+        {ADMIN_NAV.news.label}
       </Link>
     </nav>
   );

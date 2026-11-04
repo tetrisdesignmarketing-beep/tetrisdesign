@@ -1,0 +1,53 @@
+/* Ô soạn đoạn văn (TipTap) trong admin Tin tức — gần giống hiển thị ngoài site. */
+.news-rte .ProseMirror {
+  min-height: 120px;
+  padding: 12px 14px;
+  outline: none;
+  font-size: 15px;
+  line-height: 1.75;
+}
+
+.news-rte .ProseMirror > * + * {
+  margin-top: 0.75em;
+}
+
+.news-rte .ProseMirror h2 {
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.news-rte .ProseMirror h3 {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.news-rte .ProseMirror ul {
+  padding-left: 1.4em;
+  list-style: disc;
+}
+
+.news-rte .ProseMirror ol {
+  padding-left: 1.4em;
+  list-style: decimal;
+}
+
+.news-rte .ProseMirror blockquote {
+  padding-left: 14px;
+  border-left: 2px solid #6f1114;
+  font-style: italic;
+}
+
+.news-rte .ProseMirror a {
+  color: #6f1114;
+  text-decoration: underline;
+}
+
+.news-rte .ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  color: #a3a3a3;
+}

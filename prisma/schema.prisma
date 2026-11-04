@@ -58,7 +58,7 @@ model Post {
   /// Gallery layout trên trang detail — map `SiteProject.layoutStyle`
   layoutStyle PostLayoutStyle @default(LAYOUT1)
   published   Boolean         @default(false)
-  /// Ưu tiên hiển thị đầu trang chủ, không phân biệt category (xem getHomeProjects).
+  /// Ưu tiên cao nhất: lên đầu /projects (mọi tab) và "Dự án khác", trước sortOrder.
   featured    Boolean         @default(false)
   categoryId  String?
   category    Category?       @relation(fields: [categoryId], references: [id], onDelete: Restrict)
@@ -96,4 +96,23 @@ model Media {
 
   @@index([type, createdAt(sort: Desc)])
   @@index([title])
+}
+
+/// Tin tức (/tin-tuc) — tách riêng khỏi Post (dự án).
+/// `content` = danh sách khối JSON (đoạn văn TipTap / ảnh) — xem lib/validations/news.ts.
+model News {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  description String   @default("") @db.Text
+  coverImage  String?
+  content     Json     @default("[]")
+  published   Boolean  @default(false)
+  /// Ưu tiên cao nhất: lên đầu /tin-tuc và "Tin khác", trước publishedAt.
+  featured    Boolean  @default(false)
+  publishedAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([published, publishedAt(sort: Desc)])
 }

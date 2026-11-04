@@ -14,6 +14,7 @@ import {
  * Lưới `/projects`: mọi `Post` published (có cover).
  * Default = toàn bộ, không dùng picker 8 bài `getHomeProjects`.
  * `?category=` = lọc theo slug category (tab).
+ * Thứ tự: bài `featured` lên đầu → `sortOrder` (admin kéo thả) → mới nhất.
  */
 export async function getSiteProjects(
   category: ProjectCategory | null = null,
@@ -24,7 +25,7 @@ export async function getSiteProjects(
         published: true,
         ...(category ? { category: { slug: category } } : {}),
       },
-      orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
+      orderBy: [{ featured: "desc" }, { sortOrder: "asc" }, { createdAt: "desc" }],
       select: postForSiteProjectSelect,
     });
 

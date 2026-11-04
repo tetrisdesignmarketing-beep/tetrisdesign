@@ -113,14 +113,26 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
+      /* /blog cũ đọc chung bảng Post (dự án) → trang danh sách chuyển sang
+         Tin tức; bài cũ cùng slug với dự án → trang dự án. */
+      {
+        source: "/blog",
+        destination: "/tin-tuc",
+        permanent: true,
+      },
+      {
+        source: "/blog/:slug",
+        destination: "/projects/:slug",
+        permanent: true,
+      },
       {
         source: "/posts",
-        destination: "/blog",
+        destination: "/tin-tuc",
         permanent: true,
       },
       {
         source: "/posts/:slug",
-        destination: "/blog/:slug",
+        destination: "/projects/:slug",
         permanent: true,
       },
     ];

@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
-import { prisma } from "@/lib/prisma";
 import { getPublishedProjectSlugs } from "@/lib/get-site-project";
+import { getPublishedNewsSlugs } from "@/lib/get-site-news";
 import { siteUrl } from "@/lib/site-metadata";
 
 const staticPaths = [
@@ -9,7 +9,7 @@ const staticPaths = [
   "/projects",
   "/services",
   "/contact",
-  "/blog",
+  "/tin-tuc",
 ];
 
 /**
@@ -38,21 +38,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }));
 
-  let blogEntries: MetadataRoute.Sitemap = [];
-  try {
-    const posts = await prisma.post.findMany({
-      where: { published: true },
-      select: { slug: true, updatedAt: true },
-    });
-    blogEntries = posts.map((post) => ({
-      url: `${siteUrl}/blog/${post.slug}`,
-      lastModified: post.updatedAt,
-      changeFrequency: "weekly" as const,
-      priority: 0.6,
-    }));
-  } catch {
-    // DB unavailable during build — static sitemap still valid
-  }
+  const newsEntries: MetadataRoute.Sitemap = (
+    await getPublishedNewsSlugs()
+  ).map((news) => ({
+    url: `${siteUrl}/tin-tuc/${news.slug}`,
+    lastModified: news.updatedAt,
+    changeFrequency: "weekly" as const,
+    priority: 0.6,
+  }));
 
-  return [...staticEntries, ...projectEntries, ...blogEntries];
+  return [...staticEntries, ...projectEntries, ...newsEntries];
 }

@@ -42,7 +42,7 @@ export const postSchema = z.object({
   images: z.array(mediaPathSchema),
   layoutStyle: postLayoutStyleSchema,
   published: z.boolean(),
-  // Ưu tiên hiển thị đầu trang chủ — xem getHomeProjects.
+  // Ưu tiên hiển thị đầu danh sách dự án — xem getSiteProjects.
   featured: z.boolean(),
 });
 
