@@ -13,6 +13,7 @@ import {
 } from "@dnd-kit/core";
 import {
   SortableContext,
+  rectSortingStrategy,
   sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
@@ -21,6 +22,7 @@ import { CSS } from "@dnd-kit/utilities";
 import {
   useFieldArray,
   useForm,
+  useWatch,
   type Control,
   type FieldErrors,
   type UseFormRegister,
@@ -31,6 +33,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   ArrowDown,
   ArrowUp,
+  Bold,
   GripVertical,
   ImageIcon,
   Plus,
@@ -92,6 +95,14 @@ function newTextBlock(): AboutTextBlock {
   return { type: "text", title: "", paragraphs: [""] };
 }
 
+/** Dòng giải mới: năm hiện tại + 1 ô Tên giải (đậm) trống. */
+function newAwardItem() {
+  return {
+    year: new Date().getFullYear(),
+    parts: [{ text: "", bold: true }],
+  };
+}
+
 function newAwardsBlock(): AboutAwardsBlock {
   return {
     type: "awards",
@@ -99,7 +110,7 @@ function newAwardsBlock(): AboutAwardsBlock {
     groups: [
       {
         title: "",
-        items: [{ year: new Date().getFullYear(), title: "", project: "" }],
+        items: [newAwardItem()],
       },
     ],
   };
@@ -188,6 +199,209 @@ function StringList({
   );
 }
 
+type AwardItemPath =
+  `blocks.${number}.groups.${number}.items.${number}`;
+type AwardItemErrors = NonNullable<
+  NonNullable<NonNullable<BlockErrors["groups"]>[number]>["items"]
+>[number];
+
+/** 1 đoạn của dòng giải — kéo-thả để đổi thứ tự (cùng kiểu bảng đối tác). */
+function SortableAwardPart({
+  id,
+  children,
+}: {
+  id: string;
+  children: (handle: ReactNode) => ReactNode;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id });
+  const handle = (
+    <button
+      type="button"
+      {...attributes}
+      {...listeners}
+      className="flex h-10 w-6 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground active:cursor-grabbing"
+      aria-label="Kéo để đổi vị trí đoạn"
+    >
+      <GripVertical className="h-4 w-4" />
+    </button>
+  );
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={cn(
+        "flex min-w-[14rem] flex-1 basis-[16rem] items-start gap-1",
+        isDragging && "relative z-10 opacity-80",
+      )}
+    >
+      {children(handle)}
+    </div>
+  );
+}
+
+/**
+ * Dòng giải: Năm (cố định đầu) + các đoạn Tên giải (đậm) / Ghi chú (thường)
+ * thêm–xoá–kéo-thả; trên trang các đoạn nối bằng dấu cách theo thứ tự này.
+ */
+function AwardItemRow({
+  itemPath,
+  control,
+  register,
+  errors,
+  canRemove,
+  onRemove,
+}: {
+  itemPath: AwardItemPath;
+  control: Control<AboutPageContent>;
+  register: UseFormRegister<AboutPageContent>;
+  errors?: AwardItemErrors;
+  canRemove: boolean;
+  onRemove: () => void;
+}) {
+  const { fields, append, remove, move, update } = useFieldArray({
+    control,
+    name: `${itemPath}.parts`,
+  });
+  const parts = useWatch({ control, name: `${itemPath}.parts` }) ?? [];
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 150, tolerance: 8 },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+  const handleDragEnd = ({ active, over }: DragEndEvent) => {
+    if (!over || active.id === over.id) return;
+    const from = fields.findIndex((field) => field.id === active.id);
+    const to = fields.findIndex((field) => field.id === over.id);
+    if (from >= 0 && to >= 0) move(from, to);
+  };
+  const partsErrors = errors?.parts;
+  const partsMessage =
+    partsErrors?.root?.message ??
+    (partsErrors as { message?: string } | undefined)?.message;
+  const boldCount = parts.filter((part) => part?.bold).length;
+
+  return (
+    <div className="grid gap-2 rounded-md border border-dashed p-2 sm:grid-cols-[6rem_minmax(0,1fr)_auto]">
+      <div>
+        <Input
+          type="number"
+          aria-label="Năm"
+          className="font-semibold"
+          {...register(`${itemPath}.year`, { valueAsNumber: true })}
+        />
+        <FieldError message={errors?.year?.message} />
+      </div>
+
+      <div className="space-y-2">
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={fields.map((field) => field.id)}
+            strategy={rectSortingStrategy}
+          >
+            <div className="flex flex-wrap gap-2">
+              {fields.map((field, partIndex) => {
+                const bold = parts[partIndex]?.bold ?? field.bold;
+                /* Phải còn ≥ 1 đoạn đậm (schema) → khoá xoá / tắt đậm đoạn đậm cuối. */
+                const lastBold = bold && boldCount <= 1;
+                return (
+                  <SortableAwardPart key={field.id} id={field.id}>
+                    {(handle) => (
+                      <>
+                        {handle}
+                        <div className="min-w-0 flex-1">
+                          <Input
+                            aria-label={bold ? "Tên giải (in đậm)" : "Dự án / ghi chú"}
+                            placeholder={bold ? "Tên giải" : "Dự án / ghi chú"}
+                            className={cn(bold && "font-semibold")}
+                            {...register(`${itemPath}.parts.${partIndex}.text`)}
+                          />
+                          <FieldError
+                            message={partsErrors?.[partIndex]?.text?.message}
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          variant={bold ? "default" : "outline"}
+                          size="icon"
+                          className="shrink-0"
+                          disabled={lastBold}
+                          aria-pressed={bold}
+                          aria-label={bold ? "Bỏ in đậm" : "In đậm"}
+                          title={bold ? "Đang in đậm (Tên giải)" : "Chữ thường (ghi chú)"}
+                          onClick={() =>
+                            update(partIndex, {
+                              text: parts[partIndex]?.text ?? field.text,
+                              bold: !bold,
+                            })
+                          }
+                        >
+                          <Bold className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="shrink-0"
+                          disabled={fields.length <= 1 || lastBold}
+                          onClick={() => remove(partIndex)}
+                          aria-label="Xoá đoạn"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </>
+                    )}
+                  </SortableAwardPart>
+                );
+              })}
+            </div>
+          </SortableContext>
+        </DndContext>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => append({ text: "", bold: true })}
+          >
+            <Plus className="h-4 w-4" />
+            <span className="font-semibold">Tên giải</span>
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => append({ text: "", bold: false })}
+          >
+            <Plus className="h-4 w-4" />
+            Dự án / ghi chú
+          </Button>
+        </div>
+        <FieldError message={partsMessage} />
+      </div>
+
+      <Button
+        type="button"
+        variant="outline"
+        size="icon"
+        disabled={!canRemove}
+        onClick={onRemove}
+        aria-label="Xóa giải thưởng"
+      >
+        <Trash2 className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+}
+
 function AwardGroupFields({
   blockIndex,
   groupIndex,
@@ -232,45 +446,22 @@ function AwardGroupFields({
         <FieldError message={errors?.groups?.[groupIndex]?.title?.message} />
       </div>
       {fields.map((item, itemIndex) => (
-        <div
+        <AwardItemRow
           key={item.id}
-          className="grid gap-2 sm:grid-cols-[6rem_1fr_1fr_auto]"
-        >
-          <Input
-            type="number"
-            aria-label="Năm"
-            {...register(`${base}.items.${itemIndex}.year`, {
-              valueAsNumber: true,
-            })}
-          />
-          <Input
-            placeholder="Tên giải (in đậm)"
-            aria-label="Tên giải"
-            {...register(`${base}.items.${itemIndex}.title`)}
-          />
-          <Input
-            placeholder="Dự án / ghi chú (tuỳ chọn)"
-            aria-label="Dự án / ghi chú"
-            {...register(`${base}.items.${itemIndex}.project`)}
-          />
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            disabled={fields.length <= 1}
-            onClick={() => remove(itemIndex)}
-            aria-label="Xóa giải thưởng"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
+          itemPath={`${base}.items.${itemIndex}`}
+          control={control}
+          register={register}
+          errors={errors?.groups?.[groupIndex]?.items?.[itemIndex]}
+          canRemove={fields.length > 1}
+          onRemove={() => remove(itemIndex)}
+        />
       ))}
       <Button
         type="button"
         variant="outline"
         size="sm"
         onClick={() =>
-          append({ year: new Date().getFullYear(), title: "", project: "" })
+          append(newAwardItem())
         }
       >
         <Plus className="h-4 w-4" />
@@ -317,7 +508,7 @@ function AwardsBlockGroups({
         onClick={() =>
           append({
             title: "",
-            items: [{ year: new Date().getFullYear(), title: "", project: "" }],
+            items: [newAwardItem()],
           })
         }
       >

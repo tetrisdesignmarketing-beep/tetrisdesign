@@ -66,21 +66,47 @@ export const homePageFormSchema = z.object({
   slides: z.array(homePageFormSlideSchema).min(1, "Cần ít nhất một slide"),
 });
 
+/** 1 đoạn chữ trong dòng giải: Tên giải (đậm) hoặc Dự án / ghi chú (thường). */
+const awardPartSchema = z.object({
+  text: z.string().trim().min(1, "Không được để trống").max(300),
+  bold: z.boolean(),
+});
+
 const awardItemSchema = z.object({
   year: z.number().int().min(1900).max(3000),
-  /** Tên giải — in đậm trên trang. */
-  title: z.string().min(1, "Tên giải không được để trống").max(300),
-  /** Dự án / ghi chú sau tên giải (vd. "Genji Steak") — chữ thường. */
-  project: z.string().max(300).optional(),
+  /** Các đoạn sau năm, nối bằng dấu cách theo đúng thứ tự (admin kéo-thả). */
+  parts: z
+    .array(awardPartSchema)
+    .min(1, "Cần ít nhất một Tên giải")
+    .refine(
+      (parts) => parts.some((part) => part.bold),
+      "Cần ít nhất một Tên giải (in đậm)",
+    ),
 });
 
 const LEGACY_AWARD_SEPARATOR = /\s+[—–]\s+/;
 
 /**
- * Giải lưu trước khi có `project`: "Tên giải — Dự án" trong 1 ô `title` →
- * tách ở dấu gạch dài đầu tiên. Chỉ chạy khi chưa có `project` (lưu từ admin
- * luôn có, kể cả rỗng) nên không tách lại lần 2.
+ * Dòng giải lưu theo kiểu cũ `{ title, project? }` → `parts`:
+ * title = phần đậm, project = phần thường (giữ dấu " — " như cách hiển thị cũ).
+ * Dữ liệu cũ hơn nữa ("Tên giải — Dự án" trong 1 ô title) tách ở gạch dài đầu.
  */
+function legacyAwardParts(item: Record<string, unknown>) {
+  let title = typeof item.title === "string" ? item.title : "";
+  let project = typeof item.project === "string" ? item.project : undefined;
+  if (project === undefined) {
+    const match = LEGACY_AWARD_SEPARATOR.exec(title);
+    if (match) {
+      project = title.slice(match.index + match[0].length);
+      title = title.slice(0, match.index);
+    }
+  }
+  const parts: Array<{ text: string; bold: boolean }> = [];
+  if (title.trim()) parts.push({ text: title.trim(), bold: true });
+  if (project?.trim()) parts.push({ text: `— ${project.trim()}`, bold: false });
+  return parts;
+}
+
 function splitLegacyAwardItems(blocks: unknown[]): unknown[] {
   return blocks.map((block) => {
     const record = block as Record<string, unknown> | null;
@@ -88,16 +114,11 @@ function splitLegacyAwardItems(blocks: unknown[]): unknown[] {
     const groups = record.groups.map((group: Record<string, unknown> | null) => {
       if (!group || !Array.isArray(group.items)) return group;
       const items = group.items.map((item: Record<string, unknown> | null) => {
-        if (!item || item.project !== undefined || typeof item.title !== "string") {
-          return item;
-        }
-        const match = LEGACY_AWARD_SEPARATOR.exec(item.title);
-        if (!match) return item;
-        return {
-          ...item,
-          title: item.title.slice(0, match.index),
-          project: item.title.slice(match.index + match[0].length),
-        };
+        if (!item || Array.isArray(item.parts)) return item;
+        const { title: _title, project: _project, ...rest } = item;
+        void _title;
+        void _project;
+        return { ...rest, parts: legacyAwardParts(item) };
       });
       return { ...group, items };
     });

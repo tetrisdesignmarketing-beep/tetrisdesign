@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { MovingLettersPop } from "@/components/site/moving-letters";
 import type { AwardGroup } from "@/lib/site-content";
 import { cn } from "@/lib/utils";
@@ -50,20 +51,29 @@ export function AwardsList({
           <div key={group.title} data-scroll-blur="">
             <h3 className="ts-heading text-sm font-semibold">{group.title}</h3>
             <ul className="mt-2 list-disc space-y-2 pl-[32px]">
-              {group.items.map((item) => (
+              {group.items.map((item, itemIndex) => (
                 <li
-                  key={`${item.year}-${item.title}`}
+                  key={`${item.year}-${itemIndex}`}
                   className="ts-body text-sm leading-relaxed text-muted-foreground"
                 >
-                  {/* Highlights: year + award name; project stays regular weight. */}
+                  {/* Year always first + bold; parts follow in admin order,
+                      joined by a space (admin types its own punctuation). */}
                   <span className="font-semibold text-foreground">
                     {item.year}
                   </span>
                   {" — "}
-                  <span className="font-semibold text-foreground">
-                    {item.title}
-                  </span>
-                  {item.project ? ` — ${item.project}` : null}
+                  {item.parts.map((part, partIndex) => (
+                    <Fragment key={partIndex}>
+                      {partIndex > 0 ? " " : null}
+                      {part.bold ? (
+                        <span className="font-semibold text-foreground">
+                          {part.text}
+                        </span>
+                      ) : (
+                        part.text
+                      )}
+                    </Fragment>
+                  ))}
                 </li>
               ))}
             </ul>

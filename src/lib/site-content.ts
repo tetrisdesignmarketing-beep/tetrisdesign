@@ -55,7 +55,8 @@ export const siteSocial = {
 
 export interface AwardGroup {
   title: string;
-  items: { year: number; title: string; project?: string }[];
+  /** Các đoạn sau năm — `bold` = Tên giải (đậm), còn lại ghi chú (thường). */
+  items: { year: number; parts: { text: string; bold: boolean }[] }[];
 }
 
 export const siteAbout = {
@@ -78,9 +79,9 @@ export const siteAbout = {
         {
           title: "Kiến trúc sư Đặng Hữu Trọng",
           items: [
-            { year: 2018, title: "Giải thưởng AYDA Vietnam" },
-            { year: 2019, title: "Asia Young Designer of the Year" },
-            { year: 2019, title: "Học bổng Harvard GSD" },
+            { year: 2018, parts: [{ text: "Giải thưởng AYDA Vietnam", bold: true }] },
+            { year: 2019, parts: [{ text: "Asia Young Designer of the Year", bold: true }] },
+            { year: 2019, parts: [{ text: "Học bổng Harvard GSD", bold: true }] },
           ],
         },
         {
@@ -88,13 +89,17 @@ export const siteAbout = {
           items: [
             {
               year: 2026,
-              title: "Best F&B Interior Design in Asia",
-              project: "Genji Steak",
+              parts: [
+                { text: "Best F&B Interior Design in Asia", bold: true },
+                { text: "— Genji Steak", bold: false },
+              ],
             },
             {
               year: 2026,
-              title: "VMARK Vietnam Design Award (Silver)",
-              project: "Flush Coffee",
+              parts: [
+                { text: "VMARK Vietnam Design Award (Silver)", bold: true },
+                { text: "— Flush Coffee", bold: false },
+              ],
             },
           ],
         },
