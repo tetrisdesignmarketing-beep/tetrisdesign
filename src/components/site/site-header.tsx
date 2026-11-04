@@ -72,7 +72,6 @@ function SiteHeaderInner({ pathname }: { pathname: string }) {
           <div className="relative z-10 ml-auto flex items-center">
             <DesktopNav inverted={lightChrome} />
             <MobileNav
-              lightChrome={lightChrome}
               open={menuOpen}
               onOpenChange={setMenuOpen}
               onClosingChange={setMenuClosing}

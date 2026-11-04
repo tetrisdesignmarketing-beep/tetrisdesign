@@ -11,7 +11,6 @@ import {
 import { createPortal } from "react-dom";
 import { SiteNavLinks, type MobileMenuPhase } from "@/components/site/site-nav-links";
 import { siteNav } from "@/lib/site-content";
-import { cn } from "@/lib/utils";
 
 /*
  * Timeline menu mobile (nguồn duy nhất — CSS đọc qua biến `--menu-*` gắn trên panel):
@@ -114,15 +113,47 @@ function getMountedServer() {
   return false;
 }
 
+/**
+ * Icon toggle menu = logo Tetris (3 khối chéo, cùng hình học `public/logo.svg`).
+ * Mở menu: 2 khối góc (trên-phải, dưới-trái) mọc ra từ khối giữa → thành dấu X
+ * (`public/menu-close.svg`). Animation ở globals.css (`.menu-mark`).
+ */
+function MenuMark() {
+  return (
+    <svg
+      className="menu-mark"
+      viewBox="0 54 512 404"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <rect x="0" y="54" width="174" height="120" />
+      <rect x="174" y="174" width="164" height="164" />
+      <rect x="338" y="338" width="174" height="120" />
+      <rect
+        className="menu-mark__corner menu-mark__corner--tr"
+        x="338"
+        y="54"
+        width="174"
+        height="120"
+      />
+      <rect
+        className="menu-mark__corner menu-mark__corner--bl"
+        x="0"
+        y="338"
+        width="174"
+        height="120"
+      />
+    </svg>
+  );
+}
+
 interface MobileNavProps {
-  lightChrome?: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onClosingChange?: (closing: boolean) => void;
 }
 
 export function MobileNav({
-  lightChrome = false,
   open,
   onOpenChange,
   onClosingChange,
@@ -149,7 +180,6 @@ export function MobileNav({
     getReducedMotion,
     getReducedMotionServer,
   );
-  const iconTone = lightChrome ? "bg-white" : "bg-foreground";
   const menuExpanded = phase !== "closed";
 
   const openMenu = useCallback(() => {
@@ -390,13 +420,6 @@ export function MobileNav({
     }
   }, [phase]);
 
-  const barClass = (extra: string) =>
-    cn(
-      "absolute block h-[2px] w-6 rounded-[8px] transition-all duration-300 motion-reduce:transition-none",
-      iconTone,
-      extra,
-    );
-
   const panel = (
     <div
       ref={panelRef}
@@ -430,9 +453,7 @@ export function MobileNav({
         onClick={() => requestToggle("open")}
       >
         <span className="sr-only">Mở menu</span>
-        <span className={barClass("-translate-y-2")} />
-        <span className={barClass("opacity-100")} />
-        <span className={barClass("translate-y-2")} />
+        <MenuMark />
       </a>
       <a
         ref={closeToggleRef}
@@ -441,13 +462,13 @@ export function MobileNav({
         aria-expanded={true}
         aria-controls={MENU_PANEL_ID}
         aria-label="Đóng menu"
+        /* `closing` → 2 khối góc thu lại trước khi nút đổi về logo. */
+        data-phase={phase}
         className="site-header-menu-toggle site-header-menu-toggle--close relative z-20 shrink-0 items-center justify-center"
         onClick={() => requestToggle("close")}
       >
         <span className="sr-only">Đóng menu</span>
-        <span className={barClass("translate-y-0 rotate-45")} />
-        <span className={barClass("opacity-0")} />
-        <span className={barClass("translate-y-0 -rotate-45")} />
+        <MenuMark />
       </a>
       {mounted ? createPortal(panel, document.body) : panel}
     </div>
