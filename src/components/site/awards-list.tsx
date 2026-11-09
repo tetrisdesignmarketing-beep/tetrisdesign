@@ -49,7 +49,7 @@ export function AwardsList({
       >
         {groups.map((group) => (
           <div key={group.title} data-scroll-blur="">
-            <h3 className="ts-heading text-sm font-semibold">{group.title}</h3>
+            <h3 className="ts-heading text-sm font-bold">{group.title}</h3>
             <ul className="mt-2 list-disc space-y-2 pl-[32px]">
               {group.items.map((item, itemIndex) => (
                 <li
@@ -58,7 +58,7 @@ export function AwardsList({
                 >
                   {/* Year always first + bold; parts follow in admin order,
                       joined by a space (admin types its own punctuation). */}
-                  <span className="font-semibold text-foreground">
+                  <span className="font-bold text-foreground">
                     {item.year}
                   </span>
                   {" — "}
@@ -66,7 +66,7 @@ export function AwardsList({
                     <Fragment key={partIndex}>
                       {partIndex > 0 ? " " : null}
                       {part.bold ? (
-                        <span className="font-semibold text-foreground">
+                        <span className="font-bold text-foreground">
                           {part.text}
                         </span>
                       ) : (

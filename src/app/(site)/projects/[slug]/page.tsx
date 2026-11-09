@@ -35,7 +35,11 @@ import {
   toMediaDimensions,
   toMediaPlaceholders,
 } from "@/lib/media-dimensions";
-import { getProjectCover, getProjectImages } from "@/lib/site-content";
+import {
+  getProjectCover,
+  getProjectFacts,
+  getProjectImages,
+} from "@/lib/site-content";
 import { createPageMetadata } from "@/lib/site-metadata";
 
 type ProjectDetailPageProps = {
@@ -125,6 +129,7 @@ export default async function ProjectDetailPage({
   }
 
   const images = getProjectImages(project);
+  const facts = getProjectFacts(project);
   const layoutStyle = project.layoutStyle ?? "LAYOUT1";
   /* Chạy song song (trước đây nối tiếp: related rồi mới tới kích thước ảnh). */
   const [related, mediaInfo] = await Promise.all([
@@ -156,6 +161,7 @@ export default async function ProjectDetailPage({
           title={project.title}
           concept={project.categoryLabel}
           address={project.location}
+          facts={facts}
           description={project.description ?? ""}
           images={images}
           related={related}
@@ -189,6 +195,7 @@ export default async function ProjectDetailPage({
     <ProjectDetailContent
       concept={project.categoryLabel}
       address={project.location}
+      facts={facts}
       description={project.description}
     />
   ) : null;
@@ -212,6 +219,7 @@ export default async function ProjectDetailPage({
               <ProjectDetailContent
                 concept={project.categoryLabel}
                 address={project.location}
+                facts={facts}
                 description={project.description}
                 className="project-detail-content--default py-8"
               />

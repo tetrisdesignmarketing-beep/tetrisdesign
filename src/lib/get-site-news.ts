@@ -11,6 +11,8 @@ export interface NewsListItem {
   slug: string;
   description: string;
   coverImage: string | null;
+  /** Có → tin link ngoài (thẻ mở tab mới, trang chi tiết redirect). */
+  externalUrl: string | null;
   publishedAt: Date;
 }
 
@@ -25,6 +27,7 @@ const listSelect = {
   slug: true,
   description: true,
   coverImage: true,
+  externalUrl: true,
   publishedAt: true,
 } as const;
 
@@ -96,8 +99,9 @@ export async function getPublishedNewsSlugs(): Promise<
   Array<{ slug: string; updatedAt: Date }>
 > {
   try {
+    /* Tin link ngoài không có nội dung trên site → không đưa vào sitemap. */
     return await prisma.news.findMany({
-      where: { published: true },
+      where: { published: true, externalUrl: null },
       select: { slug: true, updatedAt: true },
     });
   } catch {

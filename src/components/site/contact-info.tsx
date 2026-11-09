@@ -13,12 +13,7 @@ export function ContactInfo({ contact, className }: ContactInfoProps) {
 
   return (
     <section className={cn("contact-info", className)}>
-      <div
-        className={cn(
-          "contact-info-list",
-          taxCode && "contact-info-list--4",
-        )}
-      >
+      <div className="contact-info-list">
         <p className="contact-info-item">
           <span className="contact-info-label site-label-text ts-label">Email:</span>{" "}
           <a

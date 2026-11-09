@@ -1,8 +1,11 @@
+import type { ProjectFact } from "@/lib/site-content";
 import { cn } from "@/lib/utils";
 
 interface ProjectDetailContentProps {
   concept?: string;
   address?: string;
+  /** Vị trí / Diện tích / Năm thiết kế / Kiến trúc sư — xem getProjectFacts. */
+  facts?: ProjectFact[];
   description: string;
   className?: string;
 }
@@ -23,6 +26,7 @@ function splitParagraphs(text: string): string[] {
 export function ProjectDetailContent({
   concept,
   address,
+  facts = [],
   description,
   className,
 }: ProjectDetailContentProps) {
@@ -41,9 +45,25 @@ export function ProjectDetailContent({
           {meta}
         </p>
       ) : null}
+      {facts.length > 0 ? (
+        /* Căn trái: mobile `.ts-body` căn đều làm giá trị lệch nhãn (nhãn giữa). */
+        <dl className="mt-8 grid grid-cols-2 text-left gap-x-6 gap-y-6 border-y border-border py-6 md:grid-flow-col md:auto-cols-fr md:grid-cols-none">
+          {facts.map((fact) => (
+            <div key={fact.label} className="min-w-0">
+              <dt className="ts-caption site-label-text uppercase tracking-[var(--tracking-label)] text-muted-foreground">
+                {fact.label}
+              </dt>
+              <dd className="ts-body mt-2 break-words text-foreground">
+                {fact.value}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
       <div className="ts-body mt-6 space-y-4 text-base leading-relaxed text-foreground md:text-lg">
         {paragraphs.map((paragraph, index) => (
-          <p key={index} className="whitespace-pre-line">
+          /* Desktop căn đều 2 bên như mobile (globals.css `.ts-body` < 1024px). */
+          <p key={index} className="whitespace-pre-line lg:text-justify">
             {paragraph}
           </p>
         ))}

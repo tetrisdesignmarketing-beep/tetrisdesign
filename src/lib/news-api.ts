@@ -66,6 +66,7 @@ export async function parseNewsBody(
       publishedAt: input.publishedAt,
       published: input.published,
       featured: input.featured,
+      externalUrl: input.externalUrl || null,
       content: input.content as Prisma.InputJsonValue,
     },
   };

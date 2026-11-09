@@ -35,6 +35,10 @@ export const postSchema = z.object({
     .string()
     .min(1, "Concept không được để trống")
     .max(100, "Concept tối đa 100 ký tự"),
+  /* Block thông tin trang chi tiết — text tự do, để trống thì ẩn ô. */
+  area: z.string().trim().max(100, "Diện tích tối đa 100 ký tự"),
+  designYear: z.string().trim().max(50, "Năm thiết kế tối đa 50 ký tự"),
+  architect: z.string().trim().max(200, "Kiến trúc sư tối đa 200 ký tự"),
   categoryId: z.string().min(1, "Chọn category"),
   description: z.string().min(1, "Mô tả không được để trống"),
   coverImage: optionalMediaPathSchema,

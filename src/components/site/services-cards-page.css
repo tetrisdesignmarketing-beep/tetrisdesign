@@ -9,6 +9,10 @@
 .svc-page {
   --svc-gutter: clamp(16px, 2.22vw, 32px);
   --svc-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  /* Cỡ tiêu đề dùng chung: hero đầu trang = tiêu đề trong thẻ dịch vụ. */
+  --svc-title-size: 13px;
+  /* Cỡ nội dung thẻ: mô tả; nút "Tư vấn dịch vụ này" = 0.8× (chữ HOA). */
+  --svc-body-size: 13px;
   overflow-x: clip;
   background: var(--background);
 }
@@ -26,10 +30,12 @@
 
 .svc-hero__line {
   display: inline-block;
-  font-size: clamp(32px, 4.1vw, 59px);
+  font-size: var(--svc-title-size);
   font-weight: 700;
   line-height: 1.57;
-  letter-spacing: -0.04em;
+  /* Cùng kiểu chữ với tiêu đề thẻ (.svc-card__title): HOA, giãn 0.01em. */
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
   color: color-mix(in srgb, #525252, #dedede var(--svc-hero-mix, 0%));
   text-decoration: none;
   transition: color 0.35s ease;
@@ -152,7 +158,7 @@
   grid-area: num;
   margin: -8px 0 0;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: var(--site-label-font-weight);
   line-height: 1;
   letter-spacing: 0.02em;
 }
@@ -183,7 +189,7 @@
 
 .svc-card__title {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--svc-title-size);
   font-weight: 700;
   line-height: 1.23;
   letter-spacing: 0.01em;
@@ -196,7 +202,7 @@
 
 .svc-card__desc {
   margin: 18px 0 0;
-  font-size: 13px;
+  font-size: var(--svc-body-size);
   font-weight: 400;
   line-height: 1.62;
 }
@@ -206,7 +212,8 @@
   justify-self: start;
   position: relative;
   padding-bottom: 13px;
-  font-size: 12px;
+  /* Chữ HOA đậm trông to hơn chữ thường cùng cỡ → 0.8× để cao bằng mô tả. */
+  font-size: calc(var(--svc-body-size) * 0.8);
   font-weight: 700;
   line-height: 1.2;
   letter-spacing: 0.02em;
@@ -321,9 +328,9 @@
     column-gap: 32px;
   }
 
-  .svc-card__title,
-  .svc-card__desc {
-    font-size: 14px;
+  .svc-page {
+    --svc-title-size: 14px;
+    --svc-body-size: 14px;
   }
 }
 
@@ -374,17 +381,13 @@
     padding-block: 4px 8px;
   }
 
-  .svc-card__title {
-    font-size: 15px;
+  .svc-page {
+    --svc-title-size: 15px;
+    --svc-body-size: 14px;
   }
 
   .svc-card__desc {
-    font-size: 14px;
     line-height: 1.65;
-  }
-
-  .svc-card__cta {
-    font-size: 12px;
   }
 
   .svc-contact {

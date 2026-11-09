@@ -1,7 +1,7 @@
 import "@/components/site/news.css";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { NewsCard } from "@/components/site/news-card";
 import { NewsContent } from "@/components/site/news-content";
 import { ProgressiveImage } from "@/components/site/progressive-image";
@@ -43,6 +43,8 @@ export default async function NewsDetailPage({ params }: NewsDetailPageProps) {
   const { slug } = await params;
   const news = await getNewsBySlug(slug);
   if (!news) notFound();
+  /* Tin link ngoài: link cũ / chia sẻ / admin "Xem trên web" → sang trang gốc. */
+  if (news.externalUrl) redirect(news.externalUrl);
   const [others, contact] = await Promise.all([
     getOtherNews(news.id),
     getSiteContact(),

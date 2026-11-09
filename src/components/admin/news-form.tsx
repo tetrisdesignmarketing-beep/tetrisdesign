@@ -2,6 +2,7 @@
 
 import { type FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Loader2 } from "lucide-react";
 import { CoverImagePicker } from "@/components/admin/cover-image-picker";
 import {
   NewsContentEditor,
@@ -11,12 +12,14 @@ import {
   FieldError,
   SitePageFormFooter,
 } from "@/components/admin/site-page-form-ui";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { slugifyVietnamese } from "@/lib/utils";
 import {
   NEWS_DESCRIPTION_MAX,
+  isHttpUrl,
   type NewsBlock,
 } from "@/lib/validations/news";
 
@@ -30,8 +33,12 @@ export interface NewsFormData {
   publishedAt: string;
   published: boolean;
   featured: boolean;
+  /** "" = bài nội bộ (soạn nội dung). */
+  externalUrl: string;
   content: NewsBlock[];
 }
+
+type NewsKind = "internal" | "external";
 
 type FieldErrors = Partial<Record<string, string[]>>;
 
@@ -66,12 +73,63 @@ export function NewsForm({
   const [content, setContent] = useState<NewsBlock[]>(
     initialData?.content ?? [newTextBlock()],
   );
+  const [kind, setKind] = useState<NewsKind>(
+    initialData?.externalUrl ? "external" : "internal",
+  );
+  const [externalUrl, setExternalUrl] = useState(initialData?.externalUrl ?? "");
+  const [isFetchingPreview, setIsFetchingPreview] = useState(false);
+  const [previewMessage, setPreviewMessage] = useState<string | null>(null);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const autoSlug = slugifyVietnamese(title);
+  const isExternal = kind === "external";
+
+  /* Đọc og:* của link → điền tiêu đề / mô tả / ảnh bìa (admin sửa lại được). */
+  const fetchPreview = async () => {
+    const url = externalUrl.trim();
+    setPreviewMessage(null);
+    if (!isHttpUrl(url)) {
+      setErrors((prev) => ({ ...prev, externalUrl: ["Link phải là URL http(s)"] }));
+      return;
+    }
+    setErrors((prev) => ({ ...prev, externalUrl: undefined }));
+    setIsFetchingPreview(true);
+    try {
+      const response = await fetch("/api/news/preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setErrors((prev) => ({
+          ...prev,
+          externalUrl: [result?.error ?? "Không đọc được trang này"],
+        }));
+        return;
+      }
+      if (result.title) setTitle(result.title);
+      if (result.description) setDescription(result.description);
+      if (result.image) setCoverImage(result.image);
+      const missing = [
+        !result.title && "tiêu đề",
+        !result.description && "mô tả",
+        !result.image && "ảnh bìa",
+      ].filter(Boolean);
+      setPreviewMessage(
+        missing.length > 0
+          ? `Đã lấy thông tin. Trang không có ${missing.join(", ")} — vui lòng nhập tay.`
+          : "Đã lấy thông tin từ link, kiểm tra lại trước khi lưu.",
+      );
+    } catch {
+      setErrors((prev) => ({ ...prev, externalUrl: ["Không đọc được trang này"] }));
+    } finally {
+      setIsFetchingPreview(false);
+    }
+  };
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -81,6 +139,9 @@ export function NewsForm({
     if (!title.trim()) local.title = ["Tiêu đề không được để trống"];
     if (!description.trim()) local.description = ["Mô tả không được để trống"];
     if (!coverImage) local.coverImage = ["Chọn ảnh bìa"];
+    if (isExternal && !isHttpUrl(externalUrl.trim())) {
+      local.externalUrl = ["Nhập link bài viết (http/https)"];
+    }
     setErrors(local);
     if (Object.keys(local).length > 0) {
       setError("Vui lòng kiểm tra các ô đánh dấu đỏ.");
@@ -103,6 +164,8 @@ export function NewsForm({
             publishedAt: `${date}T00:00:00+07:00`,
             published,
             featured,
+            externalUrl: isExternal ? externalUrl.trim() : "",
+            /* Giữ nội dung đã soạn để đổi lại "Bài viết" không mất. */
             content,
           }),
         },
@@ -139,6 +202,66 @@ export function NewsForm({
     <form onSubmit={onSubmit} className="space-y-8">
       <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-5">
+          <div className="space-y-2">
+            <Label>Loại tin</Label>
+            <div className="flex flex-wrap gap-4 text-sm">
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  name="news-kind"
+                  checked={!isExternal}
+                  onChange={() => setKind("internal")}
+                  className="h-4 w-4 accent-[#6f1114]"
+                />
+                Bài viết (soạn nội dung)
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  name="news-kind"
+                  checked={isExternal}
+                  onChange={() => setKind("external")}
+                  className="h-4 w-4 accent-[#6f1114]"
+                />
+                Link bài từ trang khác
+              </label>
+            </div>
+          </div>
+
+          {isExternal ? (
+            <div className="space-y-2">
+              <Label htmlFor="news-external-url">Link bài viết</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="news-external-url"
+                  type="url"
+                  value={externalUrl}
+                  onChange={(event) => setExternalUrl(event.target.value)}
+                  placeholder="https://..."
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={fetchPreview}
+                  disabled={isFetchingPreview || !externalUrl.trim()}
+                >
+                  {isFetchingPreview ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : null}
+                  Lấy thông tin
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Bấm &quot;Lấy thông tin&quot; để tự điền tiêu đề, mô tả, ảnh bìa từ trang
+                gốc. Người xem bấm vào tin sẽ mở trang này ở tab mới.
+              </p>
+              {previewMessage ? (
+                <p className="text-xs text-emerald-700">{previewMessage}</p>
+              ) : null}
+              <FieldError message={errors.externalUrl?.[0]} />
+            </div>
+          ) : null}
+
           <div className="space-y-2">
             <Label htmlFor="news-title">Tiêu đề</Label>
             <Input
@@ -221,7 +344,11 @@ export function NewsForm({
         <div className="space-y-2">
           <CoverImagePicker
             label="Ảnh bìa"
-            description="Ảnh vuông ở trang danh sách (tự cắt giữa) và đầu bài viết"
+            description={
+              isExternal
+                ? "Ảnh vuông ở trang danh sách (tự cắt giữa) — lấy từ link hoặc chọn từ Media"
+                : "Ảnh vuông ở trang danh sách (tự cắt giữa) và đầu bài viết"
+            }
             value={coverImage}
             onChange={setCoverImage}
           />
@@ -229,7 +356,7 @@ export function NewsForm({
         </div>
       </section>
 
-      <section className="space-y-3">
+      <section className={isExternal ? "hidden" : "space-y-3"}>
         <div>
           <h2 className="text-lg font-semibold">Nội dung bài</h2>
           <p className="text-sm text-muted-foreground">

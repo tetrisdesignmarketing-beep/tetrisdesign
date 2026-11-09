@@ -44,6 +44,9 @@ export function PostForm({ initialData, categories, mode }: PostFormProps) {
       slug: "",
       address: "",
       concept: "",
+      area: "",
+      designYear: "",
+      architect: "",
       categoryId: "",
       description: "",
       coverImage: "",
@@ -150,6 +153,29 @@ export function PostForm({ initialData, categories, mode }: PostFormProps) {
           {...register("concept")}
         />
         <FieldError message={errors.concept?.message} />
+      </div>
+
+      {/* Block thông tin trang chi tiết; Vị trí lấy từ Địa chỉ. Trống → ẩn ô. */}
+      <div className="grid gap-4 sm:grid-cols-3">
+        <div className="space-y-2">
+          <Label htmlFor="area">Diện tích</Label>
+          <Input id="area" placeholder="250 m²" {...register("area")} />
+          <FieldError message={errors.area?.message} />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="designYear">Năm thiết kế</Label>
+          <Input id="designYear" placeholder="2024" {...register("designYear")} />
+          <FieldError message={errors.designYear?.message} />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="architect">Kiến trúc sư</Label>
+          <Input
+            id="architect"
+            placeholder="KTS Nguyễn Văn A"
+            {...register("architect")}
+          />
+          <FieldError message={errors.architect?.message} />
+        </div>
       </div>
 
       <div className="space-y-2">

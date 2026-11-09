@@ -164,7 +164,7 @@ export function PartnersRow({
       <h2
         data-section-title=""
         data-ml2-heading={headingEffect === "ml2" ? "" : undefined}
-        className="ts-heading site-label-text text-center uppercase"
+        className="ts-heading site-label-text uppercase"
       >
         {headingEffect === "ml2" ? (
           <MovingLettersPop

@@ -3,6 +3,7 @@ import {
   MovingLettersPop,
   MovingLettersScale,
 } from "@/components/site/moving-letters";
+import { renderInlineBold, stripInlineBold } from "@/lib/inline-bold";
 import { cn } from "@/lib/utils";
 
 interface ContentSectionProps {
@@ -67,9 +68,10 @@ export function ContentSection({
             className="ts-body text-sm leading-relaxed text-muted-foreground"
           >
             {movingLetters ? (
-              <MovingLettersScale text={paragraph} />
+              /* Hiệu ứng tách từng chữ cái → không giữ được đậm, chỉ bỏ dấu **. */
+              <MovingLettersScale text={stripInlineBold(paragraph)} />
             ) : (
-              paragraph
+              renderInlineBold(paragraph)
             )}
           </p>
         ))}

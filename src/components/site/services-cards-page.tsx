@@ -24,8 +24,8 @@ interface ServicesCardsPageProps {
   contact?: ContactPageContent;
 }
 
-/** Màu thẻ theo thứ tự (lặp lại khi > 3 dịch vụ) — đúng bản thiết kế. */
-const CARD_TONES = ["dark", "red", "light"] as const;
+/** Màu thẻ xen kẽ: thẻ lẻ (1, 3, 5…) xám nhạt, thẻ chẵn (2, 4, 6…) đỏ. */
+const CARD_TONES = ["light", "red"] as const;
 
 /** "We turn ideas into spaces" — vị trí ngang từng chữ theo bản desktop 1440. */
 const TAGLINE_WORDS = [
@@ -42,7 +42,8 @@ function heroLabel(service: SiteService) {
     /\s+/g,
     " ",
   );
-  return /[.!?…]$/.test(text) ? text : `${text}.`;
+  /* Không có dấu chấm cuối (kể cả khi admin nhập sẵn). */
+  return text.replace(/[.…]+$/, "").trimEnd();
 }
 
 function cardAnchor(index: number) {

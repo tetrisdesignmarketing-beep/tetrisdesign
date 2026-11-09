@@ -68,7 +68,7 @@
   margin: 12px 0 0;
   overflow: hidden;
   font-size: 13px;
-  font-weight: 300;
+  font-weight: 400;
   line-height: 1.8;
   color: #666;
   -webkit-box-orient: vertical;
@@ -90,7 +90,7 @@
 
 .news-card__meta span {
   font-size: 10px;
-  font-weight: 500;
+  font-weight: var(--site-label-font-weight);
 }
 
 .news-card__meta time {
@@ -142,7 +142,7 @@
   gap: 4px 18px;
   margin-top: 70px;
   font-size: 17px;
-  font-weight: 300;
+  font-weight: 400;
   color: #666;
 }
 

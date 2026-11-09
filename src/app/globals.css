@@ -51,12 +51,14 @@
      nơi dùng. Trang khác: dùng class .site-label-text hoặc 2 biến này. */
   --site-label-font-size: 0.875rem;
   --site-label-font-weight: 700;
-  /* Mobile/tablet overlay menu — Darker Grotesque runs small, 14px read too tiny. */
-  --mobile-menu-font-size: clamp(1.25rem, 5vw, 1.5rem);
+  /* Mobile/tablet overlay menu (< 1024px): cố định 16px theo yêu cầu. */
+  --mobile-menu-font-size: 16px;
   /* Độ đậm chữ thường (nội dung, mô tả, tiêu đề không phải label) trên site
      public — đổi 1 chỗ, áp mọi nơi không đặt độ đậm riêng. Darker Grotesque
-     đang đóng gói 300–900 (xem @font-face). Admin giữ 400. */
-  --site-body-font-weight: 500;
+     đang đóng gói 300–900 (xem @font-face). Admin giữ 400.
+     Chuẩn site (theo trang Liên hệ): chữ thường 400, chữ đậm 700
+     (--site-label-font-weight) — không dùng 300/500/600. */
+  --site-body-font-weight: 400;
   /* Khoảng cách chữ (letter-spacing) dùng chung — đổi 4 dòng này để chỉnh cả
      site (logo là SVG nên không bị ảnh hưởng). Đoạn văn nội dung giữ normal. */
   --tracking-label-wide: 0.15em; /* menu mobile, bộ lọc dự án, nhãn trang lỗi */
@@ -209,9 +211,11 @@
 }
 
 /* Contact — info block dưới map */
+/* Căn trái, thẳng mép trái bản đồ (mobile lề 28px; md+ khung 700px giữa trang
+   — khớp className của ContactMap ở contact/page.tsx). */
 .contact-info {
   padding-block: 3rem;
-  text-align: center;
+  text-align: left;
 }
 
 @media (min-width: 768px) {
@@ -221,9 +225,10 @@
 }
 
 .contact-info-list {
-  margin-inline: auto;
-  max-width: 28rem;
-  padding-inline: 1rem;
+  margin-inline: 0;
+  max-width: calc(28rem + 56px);
+  padding-inline: 28px;
+  box-sizing: border-box;
   font-size: 0.875rem;
   color: var(--muted-foreground);
 }
@@ -249,30 +254,13 @@ a.contact-info-value:hover {
 }
 
 @media (min-width: 768px) {
+  /* Mỗi thông tin 1 dòng (Email / SĐT / Địa chỉ / MST xếp dọc), thẳng mép bản đồ. */
   .contact-info-list {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    column-gap: 2rem;
+    width: 100%;
     max-width: 700px;
+    margin-inline: auto;
     margin-top: 0;
-  }
-
-  .contact-info-list > * + * {
-    margin-top: 0;
-  }
-
-  /* Có mã số thuế → 4 cột, nới rộng để email không tràn. */
-  .contact-info-list--4 {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    max-width: 960px;
-  }
-
-  .contact-info-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
-    text-align: center;
+    padding-inline: 0;
   }
 
   .contact-info-label {
@@ -283,7 +271,6 @@ a.contact-info-value:hover {
 
   .contact-info-value {
     color: var(--muted-foreground);
-    text-wrap: balance;
     overflow-wrap: break-word;
   }
 }
@@ -3224,7 +3211,7 @@ html[data-lightbox-open] .site-header-menu-toggle {
     background: none;
     font-family: var(--font-ui);
     font-size: clamp(0.65rem, 0.9vw, 0.8rem);
-    font-weight: 500;
+    font-weight: var(--site-label-font-weight);
     line-height: 1.25;
     letter-spacing: var(--tracking-detail);
     text-align: center;
@@ -3522,7 +3509,7 @@ html:not([data-intro-done]):has([data-site-loading-intro])
   font-family: var(--font-ui);
   /* Giảm ~25% so với bản đầu (7vw / tối đa 2.5rem). */
   font-size: clamp(1.25rem, 5.25vw, 1.875rem);
-  font-weight: 500;
+  font-weight: var(--site-label-font-weight);
   line-height: 1.28;
   letter-spacing: 0;
   text-align: left;
@@ -3586,7 +3573,7 @@ html:not([data-intro-done]):has([data-site-loading-intro])
 .services-showcase__label {
   font-family: var(--font-ui);
   font-size: clamp(0.75rem, 3.2vw, 1rem);
-  font-weight: 500;
+  font-weight: var(--site-label-font-weight);
   line-height: 1.2;
   text-transform: uppercase;
   letter-spacing: var(--tracking-detail);
@@ -3890,7 +3877,7 @@ html:not([data-intro-done]):has([data-site-loading-intro])
   right: 4vw;
   font-family: var(--font-ui);
   font-size: clamp(1rem, 4.6vw, 1.5rem);
-  font-weight: 500;
+  font-weight: var(--site-label-font-weight);
   line-height: 1.25;
   white-space: nowrap;
   overflow: hidden;
@@ -3936,14 +3923,14 @@ html:not([data-intro-done]):has([data-site-loading-intro])
 .service-design2__title {
   font-family: var(--font-ui);
   font-size: clamp(1.5rem, 7vw, 2.5rem);
-  font-weight: 500;
+  font-weight: var(--site-label-font-weight);
   line-height: 1.15;
 }
 
 .service-design2__label {
   font-family: var(--font-ui);
   font-size: clamp(0.75rem, 3.2vw, 1rem);
-  font-weight: 500;
+  font-weight: var(--site-label-font-weight);
   text-transform: uppercase;
   letter-spacing: var(--tracking-label);
 }

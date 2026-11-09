@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useRef, useState } from "react";
 import {
   DndContext,
   KeyboardSensor,
@@ -158,12 +158,45 @@ function StringList({
   onChange: (next: string[]) => void;
   error?: string;
 }) {
+  const textareaRefs = useRef<Array<HTMLTextAreaElement | null>>([]);
+
+  /* Bọc / gỡ `**…**` quanh vùng đang chọn — site hiển thị thành chữ đậm
+     (lib/inline-bold.tsx). Không chọn gì → chèn `****`, con trỏ ở giữa. */
+  const toggleBold = (index: number) => {
+    const el = textareaRefs.current[index];
+    if (!el) return;
+    const text = values[index] ?? "";
+    const { selectionStart: start, selectionEnd: end } = el;
+    const wrapped =
+      start >= 2 &&
+      text.slice(start - 2, start) === "**" &&
+      text.slice(end, end + 2) === "**";
+    const nextText = wrapped
+      ? text.slice(0, start - 2) + text.slice(start, end) + text.slice(end + 2)
+      : `${text.slice(0, start)}**${text.slice(start, end)}**${text.slice(end)}`;
+    const offset = wrapped ? -2 : 2;
+    const next = [...values];
+    next[index] = nextText;
+    onChange(next);
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(start + offset, end + offset);
+    });
+  };
+
   return (
     <div className="space-y-2">
       <Label>{label}</Label>
+      <p className="text-xs text-muted-foreground">
+        Chữ đậm: bôi chọn chữ rồi bấm nút <strong>B</strong> (hoặc gõ{" "}
+        <code>**chữ đậm**</code>).
+      </p>
       {values.map((value, index) => (
         <div key={index} className="flex gap-2">
           <Textarea
+            ref={(el) => {
+              textareaRefs.current[index] = el;
+            }}
             rows={3}
             value={value}
             onChange={(e) => {
@@ -172,6 +205,18 @@ function StringList({
               onChange(next);
             }}
           />
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="shrink-0"
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => toggleBold(index)}
+            aria-label="In đậm phần đã chọn"
+            title="In đậm (**chữ**)"
+          >
+            <Bold className="h-4 w-4" />
+          </Button>
           <Button
             type="button"
             variant="outline"

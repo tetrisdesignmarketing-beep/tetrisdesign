@@ -51,6 +51,10 @@ model Post {
   slug        String          @unique
   address     String          @default("")
   concept     String          @default("")
+  /// Block thông tin trang chi tiết (text tự do, không bắt buộc). Vị trí = address.
+  area        String          @default("")
+  designYear  String          @default("")
+  architect   String          @default("")
   description String          @default("") @db.Text
   coverImage  String?
   /// Gallery — map `SiteProject.gallery`
@@ -107,6 +111,8 @@ model News {
   description String   @default("") @db.Text
   coverImage  String?
   content     Json     @default("[]")
+  /// Có giá trị → tin là link ngoài: click mở trang này (tab mới), /tin-tuc/[slug] redirect sang.
+  externalUrl String?
   published   Boolean  @default(false)
   /// Ưu tiên cao nhất: lên đầu /tin-tuc và "Tin khác", trước publishedAt.
   featured    Boolean  @default(false)

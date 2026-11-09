@@ -40,6 +40,7 @@ export default async function EditNewsPage({ params }: EditNewsPageProps) {
               publishedAt: news.publishedAt.toISOString(),
               published: news.published,
               featured: news.featured,
+              externalUrl: news.externalUrl ?? "",
               content: parseNewsContent(news.content),
             }}
           />

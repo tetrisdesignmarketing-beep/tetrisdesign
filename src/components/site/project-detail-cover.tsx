@@ -33,7 +33,7 @@ export function ProjectDetailCover({
       <div className="project-detail-cover__scrim" aria-hidden />
       <Link
         href="/projects"
-        className="ts-label absolute left-4 top-4 z-10 text-xs font-medium uppercase tracking-[var(--tracking-label)] text-white/70 transition-colors hover:text-white"
+        className="ts-label absolute left-4 top-4 z-10 text-xs font-bold uppercase tracking-[var(--tracking-label)] text-white/70 transition-colors hover:text-white"
       >
         ← Dự án
       </Link>

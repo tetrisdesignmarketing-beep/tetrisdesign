@@ -14,6 +14,9 @@ export const postForSiteProjectSelect = {
   title: true,
   address: true,
   concept: true,
+  area: true,
+  designYear: true,
+  architect: true,
   description: true,
   coverImage: true,
   images: true,
@@ -27,6 +30,10 @@ export type PostForSiteProject = {
   title: string;
   address: string;
   concept: string;
+  /* Optional: home cards select fewer columns (không cần block thông tin). */
+  area?: string;
+  designYear?: string;
+  architect?: string;
   description: string;
   coverImage: string | null;
   images: string[];
@@ -56,6 +63,9 @@ export function mapPostToSiteProject(post: PostForSiteProject): SiteProject {
     category: toProjectCategory(post.category?.slug),
     categoryLabel: post.concept.trim() || post.category?.name || "",
     location: post.address,
+    area: post.area,
+    designYear: post.designYear,
+    architect: post.architect,
     illustration: cover,
     heroImage: post.coverImage?.trim() || undefined,
     description: post.description,

@@ -91,6 +91,32 @@ export function parseNewsContent(raw: unknown): NewsBlock[] {
 
 export const NEWS_DESCRIPTION_MAX = 400;
 
+export function isHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+/** Link bài ở trang khác: trống → bài nội bộ (soạn nội dung). */
+export const newsExternalUrlSchema = z
+  .string()
+  .trim()
+  .max(2048, "Link tối đa 2048 ký tự")
+  .refine((value) => value === "" || isHttpUrl(value), "Link phải là URL http(s)");
+
+/** Body POST /api/news/preview — đọc og:title / og:description / og:image. */
+export const newsLinkPreviewSchema = z.object({
+  url: z
+    .string()
+    .trim()
+    .min(1, "Nhập link bài viết")
+    .max(2048)
+    .refine(isHttpUrl, "Link phải là URL http(s)"),
+});
+
 /** Body PUT/POST /api/news. */
 export const newsSchema = z.object({
   title: z.string().trim().min(1, "Tiêu đề không được để trống").max(300),
@@ -106,6 +132,7 @@ export const newsSchema = z.object({
   publishedAt: z.coerce.date({ error: "Ngày đăng không hợp lệ" }),
   published: z.boolean(),
   featured: z.boolean().default(false),
+  externalUrl: newsExternalUrlSchema.default(""),
   content: newsContentSchema,
 });
 export type NewsInput = z.infer<typeof newsSchema>;

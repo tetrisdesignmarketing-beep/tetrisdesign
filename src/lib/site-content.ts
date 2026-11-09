@@ -198,6 +198,10 @@ export interface SiteProject {
   categoryLabel: string;
   /** Map `Post.address` */
   location: string;
+  /** Block thông tin trang chi tiết — map `Post.area` / `designYear` / `architect`. */
+  area?: string;
+  designYear?: string;
+  architect?: string;
   /** Card / list cover — map `Post.coverImage` khi chưa có heroImage */
   illustration: string;
   /** Ảnh bìa trang detail — map `Post.coverImage` */
@@ -209,6 +213,23 @@ export interface SiteProject {
   gallery?: string[];
   /** Gallery layout — map `Post.layoutStyle`; thiếu → LAYOUT1 */
   layoutStyle?: SiteProjectLayoutStyle;
+}
+
+export interface ProjectFact {
+  label: string;
+  value: string;
+}
+
+/** Block thông tin trang chi tiết (thứ tự cố định); ô trống bị bỏ. */
+export function getProjectFacts(project: SiteProject): ProjectFact[] {
+  return [
+    { label: "Vị trí", value: project.location },
+    { label: "Diện tích", value: project.area ?? "" },
+    { label: "Năm thiết kế", value: project.designYear ?? "" },
+    { label: "Kiến trúc sư", value: project.architect ?? "" },
+  ]
+    .map((fact) => ({ ...fact, value: fact.value.trim() }))
+    .filter((fact) => fact.value);
 }
 
 const COCKTAIL_PAIRING_DIR = "/site/projects/cocktail-pairing";

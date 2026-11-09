@@ -11,13 +11,14 @@ import {
 } from "@/components/site/full-page-scroll";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { PROJECT_DETAIL_LAYOUT2_SECTIONS } from "@/lib/project-detail-layout2-section-config";
-import type { SiteProject } from "@/lib/site-content";
+import type { ProjectFact, SiteProject } from "@/lib/site-content";
 import type { ContactPageContent } from "@/lib/validations/site-page";
 
 interface ProjectDetailLayout2ScrollProps {
   title: string;
   concept: string;
   address: string;
+  facts: ProjectFact[];
   description: string;
   images: string[];
   related: SiteProject[];
@@ -28,6 +29,7 @@ export function ProjectDetailLayout2Scroll({
   title,
   concept,
   address,
+  facts,
   description,
   images,
   related,
@@ -45,6 +47,7 @@ export function ProjectDetailLayout2Scroll({
           <ProjectDetailContent
             concept={concept}
             address={address}
+            facts={facts}
             description={description}
           />
         ) : null}
@@ -69,6 +72,7 @@ export function ProjectDetailLayout2Scroll({
             <ProjectDetailContent
               concept={concept}
               address={address}
+              facts={facts}
               description={description}
             />
           ) : null}
